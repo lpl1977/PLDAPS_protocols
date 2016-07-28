@@ -110,20 +110,31 @@ switch state
         %  keypresses, joystick position, etc.
         
         %  Grab a snapshot of the joystick data
-        p.trial.stimulus.joystick.snapshot = joystick.get_joystick_status([p.trial.stimulus.joystick.released_threshold p.trial.stimulus.joystick.engaged_threshold],p.trial.stimulus.joystick.orientation);
+        p.trial.joystick.snapshot = joystick.get_joystick_status([p.trial.joystick.released_threshold p.trial.joystick.engaged_threshold -3*p.trial.joystick.released_threshold],p.trial.joystick.orientation);
+        
+        %  DO NOT PROCEED IF JOYSTICK IS DISCONNECTED
+        if(~isstruct(p.trial.joystick.snapshot))
+            disp('Warning:  joystick disconnected.  Plug it in, I will wait...');
+            while(~isstruct(p.trial.joystick.snapshot))
+                p.trial.joystick.snapshot = joystick.get_joystick_status([p.trial.joystick.released_threshold p.trial.joystick.engaged_threshold -3*p.trial.joystick.released_threshold],p.trial.joystick.orientation);
+            end
+        end
         
     case p.trial.pldaps.trialStates.framePrepareDrawing
         %  Frame PrepareDrawing is where you can prepare all drawing and
         %  task state control.
-        
+
         %  Determine joystick status
-        if(p.trial.stimulus.joystick.snapshot.status(1)==0)
-            p.trial.stimulus.joystick.state=JOYSTICK_RELEASED;
-        elseif(abs(p.trial.stimulus.joystick.snapshot.status(2)==1))
-            p.trial.stimulus.joystick.state=JOYSTICK_ENGAGED;
+        if(p.trial.joystick.snapshot.status(1)==0 && p.trial.joystick.snapshot.status(3)==0)
+            p.trial.joystick.state=JOYSTICK_RELEASED;
+        elseif(p.trial.joystick.snapshot.status(2)==1)
+            p.trial.joystick.state=JOYSTICK_ENGAGED;
         else
-            p.trial.stimulus.joystick.state=JOYSTICK_EQUIVOCAL;
+            p.trial.joystick.state=JOYSTICK_EQUIVOCAL;
         end
+                
+        %  Display joystick status to screen
+        joystick.joystick_display(p,p.trial.joystick.snapshot);
         
         %
         %  Control trial events based on trial state
@@ -144,30 +155,23 @@ switch state
                 ShowBaitedCue(p);
                 
                 %  Start timer
+                %
+                %  Once monkey engages joystick during baited time switch
+                %  to engaged state.
                 if(isnan(p.trial.stimulus.timing.baited_start_time))
                     p.trial.stimulus.timing.baited_start_time = GetSecs;
-                    fprintf('Start baited state with %0.3f sec grace period.\n',p.trial.stimulus.timing.grace_to_engage);
-                else
-                    %  Baited state will last for grace_to_engage then
-                    %  transition to unbaited if monkey fails to engage.
-                    %
-                    %  If monkey engages joystick during baited time then
-                    %  switch to engaged state.
-                    
-                    if(p.trial.stimulus.timing.baited_start_time > GetSecs-p.trial.stimulus.timing.grace_to_engage)
-                        %  Still can engage, so check
-                        if(p.trial.stimulus.joystick.state==JOYSTICK_ENGAGED)
-                            fprintf('Monkey engaged joystick after %0.3f sec.\n',GetSecs-p.trial.stimulus.timing.baited_start_time);
-                            p.trial.stimulus.timing.baited_start_time = NaN;
-                            p.trial.stimulus.trial_state = STATE_ENGAGED;
-                        end
+                    p.trial.stimulus.timing.baited_wait_for_release = p.trial.joystick.state~=JOYSTICK_RELEASED;
+                    if(p.trial.stimulus.timing.baited_wait_for_release)
+                        fprintf('Start baited state; must wait for monkey to release joystick.\n');
                     else
-                        %  Monkey never engaged so go to timeout state
-                        fprintf('Monkey failed to engage joystick in time.\n');
-                        pds.audio.play(p,'breakfix');
-                        p.trial.stimulus.timing.baited_start_time = NaN;
-                        p.trial.stimulus.trial_state = STATE_TIMEOUT;
+                        fprintf('Start baited state; must wait for monkey to engage joystick.\n');
                     end
+                elseif(~p.trial.stimulus.timing.baited_wait_for_release && p.trial.joystick.state==JOYSTICK_ENGAGED)
+                    fprintf('Monkey triggered engage state after %0.3f sec.\n',GetSecs-p.trial.stimulus.timing.baited_start_time);
+                    p.trial.stimulus.timing.baited_start_time = NaN;
+                    p.trial.stimulus.trial_state = STATE_ENGAGED;
+                elseif(p.trial.stimulus.timing.baited_wait_for_release)
+                    p.trial.stimulus.timing.baited_wait_for_release = p.trial.joystick.state~=JOYSTICK_RELEASED;
                 end
                 
             case STATE_ENGAGED
@@ -183,40 +187,31 @@ switch state
                 if(isnan(p.trial.stimulus.timing.engaged_start_time))
                     p.trial.stimulus.timing.engaged_start_time = GetSecs;
                     fprintf('Start engaged state of %0.3f sec duration.\n',p.trial.stimulus.timing.engaged_time);
-                    if(p.trial.stimulus.reward_for_engaged)
-                        fprintf('Monkey elligible for rewards.\n');
-                        p.trial.stimulus.timing.engaged_reward_time = GetSecs;
-                        fprintf('First reward occurs in %0.3f sec.\n',p.trial.stimulus.timing.engaged_reward_interval);
-                    end
-                else
-                    if(p.trial.stimulus.reward_for_engaged)
-                        %  Continue rewarding periodically
-                        if(p.trial.stimulus.timing.engaged_reward_time < GetSecs - p.trial.stimulus.timing.engaged_reward_interval)
-                            p.trial.stimulus.timing.engaged_reward_time = GetSecs;
-                            pds.behavior.reward.give(p,p.trial.stimulus.engaged_reward_amount);
-                            p.trial.stimulus.timing.engaged_reward_interval = unifrnd(p.trial.stimulus.timing.min_engaged_reward_interval,p.trial.stimulus.timing.max_engaged_reward_interval);
-                            fprintf('Next reward occurs in %0.3f sec.\n',p.trial.stimulus.timing.engaged_reward_interval);
-                        end
-                    end
-                    %  Check engage time
-                    if(p.trial.stimulus.timing.engaged_start_time >= GetSecs-p.trial.stimulus.timing.engaged_time)
-                        %  We are still within the engage time
+                elseif(p.trial.stimulus.timing.engaged_start_time >= GetSecs-p.trial.stimulus.timing.engaged_time)
+                    %  We are still within the engage time
+                    
+                    if(p.trial.joystick.state==JOYSTICK_RELEASED)
+                        %  Monkey has released the joystick prematurely.
+                        held_time = GetSecs-p.trial.stimulus.timing.engaged_start_time;
+                        fprintf('Monkey released joystick early (%0.3f sec).\n',held_time);
+                        pds.audio.play(p,'breakfix');
                         
-                        if(p.trial.stimulus.joystick.state~=JOYSTICK_ENGAGED)
-                            %  Monkey has released the joystick prematurely.
-                            fprintf('Monkey released joystick early (%0.3f sec).\n',GetSecs-p.trial.stimulus.timing.engaged_start_time);
-                            pds.audio.play(p,'breakfix');
+                        %  Set time out time
+                        if(~isnan(p.trial.stimulus.timing.timeout))
+                            p.trial.stimulus.timing.timeout = 0.5;
                             p.trial.stimulus.timing.engaged_reward_time = NaN;
                             p.trial.stimulus.timing.engaged_start_time = NaN;
                             p.trial.stimulus.trial_state = STATE_TIMEOUT;
+                        else
+                            fprintf('End trial %d.\n',p.trial.pldaps.iTrial);
+                            p.trial.flagNextTrial = true;
                         end
-                    else
-                        %  engage time has elapsed.
-                        fprintf('Monkey held joystick to end of engaged time.\n');
-                        p.trial.stimulus.timing.engaged_reward_time = NaN;
-                        p.trial.stimulus.timing.engaged_start_time = NaN;
-                        p.trial.stimulus.trial_state = STATE_RELEASE;
                     end
+                else
+                    %  engage time has elapsed.
+                    fprintf('Monkey held joystick to end of engaged time.\n');
+                    p.trial.stimulus.timing.engaged_start_time = NaN;
+                    p.trial.stimulus.trial_state = STATE_RELEASE;
                 end
                 
             case STATE_RELEASE
@@ -231,28 +226,20 @@ switch state
                 if(isnan(p.trial.stimulus.timing.release_start_time))
                     p.trial.stimulus.timing.release_start_time = GetSecs;
                     fprintf('Monkey should release joystick within %0.3f sec to get a release reward.\n',p.trial.stimulus.timing.grace_to_release);
-                else
-                    %  Check joystick; if he re-engages during the
-                    %  mandatory released state then transition back to
-                    %  unbaited.
-                    %
-                    %  If he leaves released for required time then go back
-                    %  to baited state.
-                    
-                    if(p.trial.stimulus.timing.release_start_time >= GetSecs - p.trial.stimulus.timing.grace_to_release)
-                        %  Still in grace period to release
-                        if(p.trial.stimulus.joystick.state==JOYSTICK_RELEASED)
-                            fprintf('Monkey released joystick with reaction time %0.3f sec.\n',GetSecs-p.trial.stimulus.timing.release_start_time);
-                            p.trial.stimulus.release_start_time = NaN;
-                            p.trial.stimulus.trial_state = STATE_REWARD;
-                        end
-                    else
-                        %  Monkey did not release in time.
-                        fprintf('Monkey did not release joystick in time.\n');
-                        pds.audio.play(p,'breakfix');
+                elseif(p.trial.stimulus.timing.release_start_time >= GetSecs - p.trial.stimulus.timing.grace_to_release)
+                    %  Still in grace period to release
+                    if(p.trial.joystick.state==JOYSTICK_RELEASED)
+                        fprintf('Monkey released joystick with reaction time %0.3f sec.\n',GetSecs-p.trial.stimulus.timing.release_start_time);
                         p.trial.stimulus.release_start_time = NaN;
-                        p.trial.stimulus.trial_state = STATE_TIMEOUT;
+                        p.trial.stimulus.trial_state = STATE_REWARD;
                     end
+                else
+                    %  Monkey did not release in time.
+                    fprintf('Monkey did not release joystick in time.  End trial.\n');
+                    pds.audio.play(p,'incorrect');
+                    p.trial.stimulus.timing.timeout = 0.5;
+                    p.trial.stimulus.release_start_time = NaN;
+                    p.trial.stimulus.trial_state = STATE_TIMEOUT;
                 end
                 
             case STATE_TIMEOUT
@@ -261,29 +248,17 @@ switch state
                 %  STATE_TIMEOUT
                 %
                 
-                %  Burn a timeout period and then recheck the joystick
-                %  state; if he has it released then proceed to unbaited
-                %  otherwise restart the timeout timer.
-                
-                if(p.trial.stimulus.timing.timeout==0)
-                    fprintf('End trial %d.\n',p.trial.pldaps.iTrial);
-                    p.trial.flagNextTrial = true;
-                end
+                %  Burn a timeout period.
                 
                 if(isnan(p.trial.stimulus.timing.timeout_start_time))
                     fprintf('Start timeout period of %0.3f sec\n',p.trial.stimulus.timing.timeout);
                     p.trial.stimulus.timing.timeout_start_time = GetSecs;
-                else
-                    %  If timeout has elapsed then check joystick
-                    if(p.trial.stimulus.timing.timeout_start_time <= GetSecs - p.trial.stimulus.timing.timeout)
-                        if(p.trial.stimulus.joystick.state==JOYSTICK_RELEASED)
-                            fprintf('Monkey does not have joystick engaged.\n');
-                            p.trial.stimulus.timing.timeout_start_time = NaN;
-                            fprintf('End trial %d.\n',p.trial.pldaps.iTrial);
-                            p.trial.flagNextTrial = true;
-                        end
-                    end
+                elseif(p.trial.stimulus.timing.timeout_start_time <= GetSecs - p.trial.stimulus.timing.timeout)
+                    fprintf('Timeout elapsed.  End trial %d.\n',p.trial.pldaps.iTrial);
+                    p.trial.stimulus.timing.timeout_start_time = NaN;
+                    p.trial.flagNextTrial = true;
                 end
+                
                 
             case STATE_UNBAITED
                 
@@ -296,41 +271,37 @@ switch state
                 if(isnan(p.trial.stimulus.timing.unbaited_start_time))
                     fprintf('Start unbaited state of %0.3f sec for trial %d.\n',p.trial.stimulus.timing.unbaited_time,p.trial.pldaps.iTrial);
                     p.trial.stimulus.timing.unbaited_start_time = GetSecs;
-                else
-                    %  If within unbaited time monkey may not engage
-                    %  joystick
-                    if(p.trial.stimulus.timing.unbaited_start_time > GetSecs - p.trial.stimulus.timing.unbaited_time)
-                        if(p.trial.stimulus.joystick.state~=JOYSTICK_RELEASED)
-                            fprintf('Monkey engaged joystick during unbaited time.\n');
-                            p.trial.stimulus.timing.unbaited_start_time = NaN;
-                            p.trial.stimulus.trial_state = STATE_TIMEOUT;
-                        end
-                    else
-                        fprintf('Monkey did not engage joystick during unbaited time.\n');
-                        p.trial.stimulus.timing.unbaited_start_time = NaN;
-                        p.trial.stimulus.trial_state = STATE_BAITED;
-                    end
-                    
+                elseif(p.trial.stimulus.timing.unbaited_start_time <= GetSecs - p.trial.stimulus.timing.unbaited_time)
+                    fprintf('Unbaited state complete.\n');
+                    p.trial.stimulus.timing.unbaited_start_time = NaN;
+                    p.trial.stimulus.trial_state = STATE_BAITED;
                 end
                 
             case STATE_REWARD
                 
                 %
                 %  STATE_REWARD
-                %
+                %                
                 
-                %  Show the reward cue, give reward, play any related
-                %  sounds, etc.
-                
-                ShowRewardCue(p);
-                
-                if(isnan(p.trial.stimulus.timing.reward_frame_start_time))
-                    p.trial.stimulus.timing.reward_frame_start_time = GetSecs;
+                %  Continue showing release cue
+                ShowReleaseCue(p);
+                                
+                if(isnan(p.trial.stimulus.timing.feedback_start_time))
+                    p.trial.stimulus.timing.feedback_start_time = GetSecs;
+                    fprintf('Start feedback delay of %0.3f sec.\n',p.trial.stimulus.timing.feedback_delay);
+                elseif(p.trial.stimulus.timing.feedback_start_time > GetSecs-p.trial.stimulus.timing.feedback_delay)
+                    if(p.trial.joystick.state~=JOYSTICK_RELEASED)
+                        fprintf('Monkey engaged joystick during feedback delay.\n');
+                        pds.audio.play(p,'breakfix');
+                        p.trial.stimulus.timing.feedback_start_time = NaN;
+                        p.trial.stimulus.timing.timeout = 0.5;
+                        p.trial.stimulus.trial_state = STATE_TIMEOUT;
+                    end
+                else
                     pds.behavior.reward.give(p,p.trial.stimulus.release_reward_amount);
                     pds.audio.play(p,'reward');
-                    fprintf('Monkey received reward.\n');
-                elseif(p.trial.stimulus.timing.reward_frame_start_time > GetSecs-p.trial.stimulus.timing.reward_frame_time)
-                    p.trial.stimulus.timing.reward_frame_start_time = NaN;
+                    fprintf('Monkey received reward for %0.3f sec.\n',p.trial.stimulus.release_reward_amount);
+                    p.trial.stimulus.timing.feedback_start_time = NaN;
                     fprintf('End trial %d.\n',p.trial.pldaps.iTrial);
                     p.trial.flagNextTrial = true;
                 end
@@ -398,28 +369,9 @@ function ShowReleaseCue(p)
 %  be.  I don't need it smoothed.
 
 
-width = p.trial.stimulus.features.unbaited.cue_width;
+width = p.trial.stimulus.features.release.cue_width;
 baseRect = [0 0 width width];
 centeredRect = CenterRectOnPointd(baseRect, p.trial.display.ctr(1), p.trial.display.ctr(2));
 
-Screen('FrameRect',p.trial.display.ptr,p.trial.stimulus.features.unbaited.cue_color,centeredRect,p.trial.stimulus.features.unbaited.cue_linewidth);
-end
-
-function ShowRewardCue(p)
-%  ShowRewardCue
-%
-%  This function should draw a purple rectangle as the cue that a reward is
-%  delivered.
-%
-%  I want a square drawn as a cue indicating release of joystick.  It will
-%  be black and centered in the middle of the screen, where there is not
-%  currently a fixation point but at some point in the future there will
-%  be.  I don't need it smoothed.
-
-
-width = p.trial.stimulus.features.reward.cue_width;
-baseRect = [0 0 width width];
-centeredRect = CenterRectOnPointd(baseRect, p.trial.display.ctr(1), p.trial.display.ctr(2));
-
-Screen('FillRect',p.trial.display.ptr,p.trial.stimulus.features.reward.cue_color,centeredRect,p.trial.stimulus.features.reward.cue_linewidth);
+Screen('FrameRect',p.trial.display.ptr,p.trial.stimulus.features.release.cue_color,centeredRect,p.trial.stimulus.features.release.cue_linewidth);
 end
