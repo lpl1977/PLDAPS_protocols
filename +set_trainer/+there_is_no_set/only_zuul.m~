@@ -52,8 +52,8 @@ switch state
             p.trial.task.performance.attempted = 0;
             
             nlum = length(p.trial.task.features.log10C);
-            p.trial.task.performance.matrix = zeros(2*nlum+2,3);
-            p.trial.task.performance.log10C = [0 p.trial.task.features.log10C(end:-1:1) p.trial.task.features.log10C(1:end) 0];
+            p.trial.task.performance.matrix = zeros(2*nlum,3);
+            p.trial.task.performance.log10C = [p.trial.task.features.log10C(end:-1:1) p.trial.task.features.log10C(1:end)];
             
             %  Indexing
             p.trial.task.indexing.current_trial = 1;
@@ -75,15 +75,15 @@ switch state
         
         %  Extract data from conditions cell array
         indx = p.trial.task.indexing.current_trial;
-         p.trial.task.condition = p.conditions{indx};
-%         p.trial.task.condition.trial_type = p.conditions{indx}.trial_type;
-%         p.trial.task.condition.symbol_type = p.conditions{indx}.symbol_type;
-%         p.trial.task.condition.luminance = p.conditions{indx}.luminance;
-%         p.trial.task.condition.lum_indx = p.conditions{indx}.lum_indx;
-%         p.trial.task.condition.log10C = p.conditions{indx}.log10C;
-%         p.trial.task.condition.trial_number = p.conditions{indx}.trial_number;
-%         p.trial.task.condition.block_number = p.conditions{indx}.block_number;
-%         p.trial.task.condition.repeat_priority = p.conditions{indx}.repeat_priority;
+        p.trial.task.condition = p.conditions{indx};
+        p.trial.task.condition.trial_type = p.conditions{indx}.trial_type;
+        p.trial.task.condition.symbol_type = p.conditions{indx}.symbol_type;
+        p.trial.task.condition.luminance = p.conditions{indx}.luminance;
+        p.trial.task.lum_indx = p.conditions{indx}.lum_indx;
+        p.trial.task.log10C = p.conditions{indx}.log10C;
+        p.trial.task.trial_number = p.conditions{indx}.trial_number;
+        p.trial.task.block_number = p.conditions{indx}.block_number;
+        p.trial.task.repeat_prioirty = p.conditions{indx}.repeat_priority;
         
         %  Random number generator seed for symbol masks
         p.trial.task.stimulus.symbol_masks.rng = rng;
@@ -119,11 +119,8 @@ switch state
         %  Print information to screen
         
         fprintf('START TRIAL ATTEMPT %d (%d trials of %d completed, %d remain):\n',p.trial.pldaps.iTrial,p.trial.task.performance.completed,p.trial.task.constants.maxTrials,p.trial.task.constants.maxTrials-p.trial.task.performance.completed);
-        fprintf('\tTrial %d of %d for block %d of %d.\n',p.trial.task.condition.trial_number,p.trial.task.constants.TrialsPerBlock,p.trial.task.condition.block_number,p.trial.task.constants.maxBlocks);
-        fprintf('\tThis is a %s %s trial with log contrast %0.3f.\n',upper(p.trial.task.condition.symbol_type),upper(p.trial.task.condition.trial_type),p.trial.task.condition.log10C);
-        if(p.trial.task.training.repeat_priority>=p.trial.task.condition.repeat_priority)
-            fprintf('\tThis trial must be repeated until completed correctly.\n');
-        end
+        fprintf('\tTrial %d of %d for block %d of %d.\n',p.trial.task.trial_number,p.trial.task.constants.maxTrialsPerBlock,p.trial.task.block_number,p.trial.task.constants.maxBlocks);
+        fprintf('\tThis is a %s %s trial with log contrast %0.3f.\n',upper(p.trial.task.condition.symbol_type),upper(p.trial.task.condition.trial_type),p.trial.task.log10C);
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  Clean Up and Save, post trial management
@@ -152,24 +149,24 @@ switch state
         %  Repeat the trial if it has an appropriate repeat priority.
         %  Otherwise update the trial index.
         if(p.trial.task.outcome.completed)
-            if(p.trial.task.training.repeat_priority<p.trial.task.condition.repeat_priority || p.trial.task.outcome.correct)
+            if(p.trial.task.training.repeat_priority<=p.trial.task. || p.trial.task.outcome.correct)
                 p.trial.task.indexing.next_trial = p.trial.task.indexing.current_trial+1;
             else
                 p.trial.task.indexing.next_trial = p.trial.task.indexing.current_trial;
                 p.conditions{end+1} = p.conditions{end};
             end
             
-            p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,1) = p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,1)+((p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial));
-            p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,2) = p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,2)+((p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial));
-            p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,3) = p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,3)+1;
+            p.trial.task.performance.matrix(p.trial.task.lum_indx,1) = p.trial.task.performance.matrix(p.trial.task.lum_indx,1)+((p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial));
+            p.trial.task.performance.matrix(p.trial.task.lum_indx,2) = p.trial.task.performance.matrix(p.trial.task.lum_indx,2)+((p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial));
+            p.trial.task.performance.matrix(p.trial.task.lum_indx,3) = p.trial.task.performance.matrix(p.trial.task.lum_indx,3)+1;
         else
             p.trial.task.indexing.next_trial = p.trial.task.indexing.current_trial;
             p.conditions{end+1} = p.conditions{end};
             
             if(p.trial.task.training.shuffle_aborts)
-                indx = p.trial.task.indexing.current_trial:p.trial.task.indexing.current_trial + p.trial.task.constants.TrialsPerBlock-p.trial.task.condition.trial_number;
+                indx = p.trial.task.indexing.current_trial:p.trial.task.indexing.current_trial + p.trial.task.constants.maxTrialsPerBlock-p.trial.task.trial_number;
                 
-                fprintf('\tReshuffling trials %d through %d (within block trial %d through %d)\n\n',indx(1),indx(end),p.trial.task.condition.trial_number,p.trial.task.constants.TrialsPerBlock);
+                fprintf('\tReshuffling trials %d through %d (within block trial %d through %d)\n\n',indx(1),indx(end),p.trial.task.trial_number,p.trial.task.constants.maxTrialsPerBlock);
                 
                 temp = p.conditions(indx);
                 p.conditions(indx) = Shuffle(temp);
