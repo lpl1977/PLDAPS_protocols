@@ -12,9 +12,6 @@ function p = setup_v02(p)
 %  Set trial master function
 p.trial.pldaps.trialFunction = 'set_trainer.there_is_no_set.only_zuul';
 
-%  Set different background color
-p.defaultParameters.display.bgColor = [0.25 0.25 0.25];
-
 %  Get default colors and put the default bit names in
 p = defaultColors(p);
 p = defaultBitNames(p);
@@ -37,7 +34,7 @@ p.trial.display.humanCLUT(17:25,:) = ...
     0.4660    0.6740    0.1880      %  Green
     0.3010    0.7450    0.9330      %  Cyan
     0.6350    0.0780    0.1840      %  Scarlet
-    0.500     0.500     0.50        %  Gray
+    p.trial.display.bgColor        %  Gray
     1.000     0         0];         %  Red   
 p.trial.display.monkeyCLUT(17:25,:) = p.trial.display.humanCLUT(17:25,:);
 
@@ -121,7 +118,7 @@ p.trial.task.timing.error_delay.start_time = NaN;
 p.trial.task.timing.buffer.start_time = NaN;
 p.trial.task.timing.buffer.maximum_time = 10/120;
 
-p.trial.task.timing.response.grace = 10;
+p.trial.task.timing.response.grace = 20;
 
 p.trial.task.timing.warning.duration = 10;
 
@@ -192,13 +189,16 @@ feval(str2func(strcat('set_trainer.there_is_no_set.',p.trial.session.subject)),p
 
 %  The trials are organized into blocks.  There are nblocks and
 %  2*nlum*nreps trials per block.  Within a block the trials will be
-%  shuffled.  There are 2*ninstructors at log10C = 0 at the beginning of
-%  each block.
+%  shuffled.  There are ninstructors for press at log10C = -0.5 and
+%  ninstructors for release at log10C = -Inf at the start of each block.
 
 %  Set up conditions matrix
 log10C = p.trial.task.features.log10C;
-lum = 0.5*(1+power(10,log10C));
+lum = p.trial.display.bgColor(1) + (1-p.trial.display.bgColor(1))*power(10,log10C);
 nlum = length(lum);
+
+p.trial.task.features.instructor_log10C = -0.5;
+instructor_lum = p.trial.display.bgColor(1) + (1-p.trial.display.bgColor(1))*power(10,p.trial.task.features.instructor_log10C);
 
 ninstructors = 4;
 nreps = 10;
@@ -217,8 +217,8 @@ nshufflegroups = 2;
 %  Column order:
 %  1--luminance
 %  2--log10C
-%  3--luminance index
-%  4--choice (0==press, 1==release)
+%  3--luminance index -- into matrix for performance display purposes
+%  4--choice (1==press, 0==release)
 %  5--within block trial number
 %  6--block number
 %  7--shuffle group (all trials within a block of a given shuffle group can
@@ -226,28 +226,32 @@ nshufflegroups = 2;
 
 A = zeros(p.trial.task.constants.TrialsPerBlock,7);
 
-A(1:ninstructors,1) = 0.2419;
-A(1:ninstructors,2) = -0.5;
+%  Release instructors
+A(1:ninstructors,1) = p.trial.display.bgColor(1);
+A(1:ninstructors,2) = -Inf;
 A(1:ninstructors,3) = 1;
-A(1:ninstructors,4) = zeros(ninstructors,1);
+A(1:ninstructors,4) = 0;
 
-A(ninstructors+1:2*ninstructors,1) = 0.6581;
-A(ninstructors+1:2*ninstructors,2) = -0.5;
-A(ninstructors+1:2*ninstructors,3) = 2*nlum+2;
-A(ninstructors+1:2*ninstructors,4) = ones(ninstructors,1);
+%  Press Instructors
+A(ninstructors+1:2*ninstructors,1) = instructor_lum;
+A(ninstructors+1:2*ninstructors,2) = p.trial.task.features.instructor_log10C;
+A(ninstructors+1:2*ninstructors,3) = nlum+3;
+A(ninstructors+1:2*ninstructors,4) = 1;
 
 A(1:2*ninstructors,5) = (1:2*ninstructors)';
 A(1:2*ninstructors,7) = 1;
 
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,1) = repmat(1-lum(:),nreps,1);
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,2) = repmat(log10C(:),nreps,1);
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,3) = repmat((nlum+1:-1:2)',nreps,1);
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,4) = zeros(nlum*nreps,1);
+%  Release trials
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,1) = p.trial.display.bgColor(1);
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,2) = -Inf;
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,3) = 2;
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,4) = 0;
 
+%  Press trials
 A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,1) = repmat(lum(:),nreps,1);
 A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,2) = repmat(log10C(:),nreps,1);
-A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,3) = repmat((2+nlum:2*nlum+1)',nreps,1);
-A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,4) = ones(nlum*nreps,1);
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,3) = repmat((3:nlum+2)',nreps,1);
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,4) = 1;
 
 A(1:2*ninstructors+2*nlum*nreps,5) = (1:2*ninstructors+2*nlum*nreps)';
 
@@ -268,7 +272,7 @@ end
 
 %  Features of the trials
 %
-%  luminance -- for stimulus preparationp.run
+%  luminance -- for stimulus preparation
 %  log10C -- for display
 %  lum_indx -- for record keeping
 %  trial_type -- press or release

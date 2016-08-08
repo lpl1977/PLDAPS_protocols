@@ -51,9 +51,13 @@ switch state
             
             p.trial.task.performance.attempted = 0;
             
+            %             nlum = length(p.trial.task.features.log10C);
+            %             p.trial.task.performance.matrix = zeros(2*nlum+2,3);
+            %             p.trial.task.performance.log10C = [-0.5 p.trial.task.features.log10C(end:-1:1) p.trial.task.features.log10C(1:end) -0.5];
+            
             nlum = length(p.trial.task.features.log10C);
-            p.trial.task.performance.matrix = zeros(2*nlum+2,3);
-            p.trial.task.performance.log10C = [0 p.trial.task.features.log10C(end:-1:1) p.trial.task.features.log10C(1:end) 0];
+            p.trial.task.performance.matrix = zeros(nlum+3,3);
+            p.trial.task.performance.log10C = p.trial.task.features.log10C;
             
             %  Indexing
             p.trial.task.indexing.current_trial = 1;
@@ -199,12 +203,21 @@ switch state
         fprintf('\tCorrectly completed:  %d of %d (%0.3f)\n',correct,completed,correct/completed);
         fprintf('\n');
         
-        for i=1:length(p.trial.task.performance.log10C)/2
-            fprintf('\t%5.2f release:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3));
+        %         for i=1:length(p.trial.task.performance.log10C)/2
+        %             fprintf('\t%5.2f release:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3));
+        %         end
+        %         for i=1+length(p.trial.task.performance.log10C)/2 : length(p.trial.task.performance.log10C)
+        %             fprintf('\t%5.2f   press:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3),1 - p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3));
+        %         end
+        %         fprintf('\n');
+        
+        fprintf('\t%5.2f instructor:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',-Inf,p.trial.task.performance.matrix(1,1:2),sum(p.trial.task.performance.matrix(1,1:2)),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3));
+        fprintf('\t%5.2f    release:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',-Inf,p.trial.task.performance.matrix(2,1:2),sum(p.trial.task.performance.matrix(2,1:2)),p.trial.task.performance.matrix(2,1)/p.trial.task.performance.matrix(2,3),p.trial.task.performance.matrix(2,1)/p.trial.task.performance.matrix(2,3));
+        
+        for i=1:length(p.trial.task.performance.log10C)
+            fprintf('\t%5.2f      press:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i+2,1:2),sum(p.trial.task.performance.matrix(i+2,1:2)),p.trial.task.performance.matrix(i+2,2)/p.trial.task.performance.matrix(i+2,3),1 - p.trial.task.performance.matrix(i+2,2)/p.trial.task.performance.matrix(i+2,3));
         end
-        for i=1+length(p.trial.task.performance.log10C)/2 : length(p.trial.task.performance.log10C)
-            fprintf('\t%5.2f   press:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3),1 - p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3));
-        end
+        fprintf('\t%5.2f instructor:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',p.trial.task.features.instructor_log10C,p.trial.task.performance.matrix(end,1:2),sum(p.trial.task.performance.matrix(end,1:2)),p.trial.task.performance.matrix(end,1)/p.trial.task.performance.matrix(end,3),p.trial.task.performance.matrix(end,1)/p.trial.task.performance.matrix(end,3));
         fprintf('\n');
         
         fprintf('Trial aborts:\n');
@@ -238,15 +251,7 @@ switch state
         check_joystick_status;
         
         %  Display joystick status to screen
-        
-        switch p.trial.task.state_variables.trial_state
-            case 'warning'
-                joystick.display(p,p.trial.joystick.warning);
-            case 'engage'
-                joystick.display(p,p.trial.joystick.engage);
-            otherwise
-                joystick.display(p,p.trial.joystick.default);
-        end
+        display_joystick_status;
         
     case p.trial.pldaps.trialStates.framePrepareDrawing
         %  Frame PrepareDrawing is where you can prepare all drawing and
@@ -1064,8 +1069,8 @@ end
         annulus_indx = noise_ring.get_annulus(frame_width,annulus_outer_diameter,annulus_inner_diameter);
         response_cue_indx = noise_ring.get_annulus(frame_width,response_cue_outer_diameter,response_cue_inner_diameter);
         
-        M = 0.5*ones(frame_width);
-        M = noise_ring.add_ring(M,response_cue_indx,p.trial.task.condition.luminance-0.5);
+        M = p.trial.display.bgColor(1)*ones(frame_width);
+        M = noise_ring.add_ring(M,response_cue_indx,p.trial.task.condition.luminance-p.trial.display.bgColor(1));
         M = noise_ring.add_noise(M,annulus_indx,p.trial.task.features.annulus.noise_sigma);
         M = noise_ring.fix_range(M);
         
@@ -1190,11 +1195,24 @@ end
         %  Determine status of joystick against thresholds
         switch p.trial.task.state_variables.trial_state
             case 'warning'
-                [zone,p.trial.joystick.warning.position] = joystick.zones(p.trial.joystick.warning);
+                [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.warning);
             case 'engage'
-                [zone,p.trial.joystick.engage.position] = joystick.zones(p.trial.joystick.engage);
+                [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.engage);
+            case 'response'
+                if(p.trial.task.training.relative_response_threshold)
+                    if(isnan(p.trial.task.timing.response.start_time))
+                        p.trial.joystick.response = p.trial.joystick.default;
+                        p.trial.joystick.response.threshold(1) = max(p.trial.joystick.position-3,p.trial.joystick.default.threshold(1));
+                        p.trial.joystick.response.threshold(2) = max(p.trial.joystick.position-2,p.trial.joystick.default.threshold(2));
+                        p.trial.joystick.response.threshold(3) = min(p.trial.joystick.position+2,p.trial.joystick.default.threshold(3));
+                        p.trial.joystick.response.threshold(4) = min(p.trial.joystick.position+3,p.trial.joystick.default.threshold(4));
+                    end
+                else
+                    p.trial.joystick.response = p.trial.joystick.default;
+                end
+                [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.response);
             otherwise
-                [zone,p.trial.joystick.default.position] = joystick.zones(p.trial.joystick.default);
+                [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.default);
         end
         %  Set joystick state variables
         p.trial.task.state_variables.joystick_released = zone==1;
@@ -1203,6 +1221,29 @@ end
         p.trial.task.state_variables.joystick_press_buffer = zone==4;
         p.trial.task.state_variables.joystick_pressed = zone==5;
     end
+
+    function display_joystick_status
+        %  display_joystick_status
+        %
+        %  This function calls the function to display the joystick status
+        %  to the console screen
+        
+        switch p.trial.task.state_variables.trial_state
+            case 'warning'
+                joystick.display(p,p.trial.joystick.position,p.trial.joystick.warning.threshold);
+            case 'engage'
+                joystick.display(p,p.trial.joystick.position,p.trial.joystick.engage.threshold);
+            case 'response'
+                if(p.trial.task.training.relative_response_threshold)
+                    joystick.display(p,p.trial.joystick.position,p.trial.joystick.response.threshold);
+                else
+                    joystick.display(p,p.trial.joystick.position,p.trial.joystick.default.threshold);
+                end
+            otherwise
+                joystick.display(p,p.trial.joystick.position,p.trial.joystick.default.threshold);
+        end
+    end
+
 
     function check_fixation_status
         %  check_fixation_status

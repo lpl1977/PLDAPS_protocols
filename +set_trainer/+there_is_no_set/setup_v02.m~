@@ -176,7 +176,7 @@ p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
 %  Constants
 %
 p.trial.task.constants.minTrialTime = 60;
-p.trial.task.constants.maxTrialsPerBlock = [];
+p.trial.task.constants.TrialsPerBlock = [];
 p.trial.task.constants.maxBlocks = [];
 p.trial.task.constants.maxTrials = [];
 
@@ -197,6 +197,7 @@ log10C = p.trial.task.features.log10C;
 lum = 0.5*(1+power(10,log10C));
 nlum = length(lum);
 
+ninstructors = 4;
 nreps = 10;
 ntotal = 1000;
 
@@ -207,7 +208,9 @@ nblocks = floor(ntotal/p.trial.task.constants.TrialsPerBlock);
 p.trial.task.constants.maxBlocks = nblocks;
 
 p.trial.task.constants.maxTrials = p.trial.task.constants.maxBlocks*p.trial.task.constants.TrialsPerBlock;
-        
+
+nshufflegroups = 2;
+
 %  Column order:
 %  1--luminance
 %  2--log10C
@@ -220,36 +223,49 @@ p.trial.task.constants.maxTrials = p.trial.task.constants.maxBlocks*p.trial.task
 
 A = zeros(p.trial.task.constants.TrialsPerBlock,7);
 
-A(1:ninstructors,1) = 0;
-A(1:ninstructors,2) = 0;
-A(1:ninstructors,3) = 
+A(1:ninstructors,1) = 0.2419;
+A(1:ninstructors,2) = -0.5;
+A(1:ninstructors,3) = 1;
+A(1:ninstructors,4) = zeros(ninstructors,1);
 
-A(1:nlum*nreps,1) = repmat(1-lum(:),nreps,1);
-A(1:nlum*nreps,2) = repmat(log10C(:),nreps,1);
-A(1:nlum*nreps,3) = repmat((nlum:-1:1)',nreps,1);
-A(1:nlum*nreps,4) = zeros(nlum*nreps,1);
+A(ninstructors+1:2*ninstructors,1) = 0.6581;
+A(ninstructors+1:2*ninstructors,2) = -0.5;
+A(ninstructors+1:2*ninstructors,3) = 2*nlum+2;
+A(ninstructors+1:2*ninstructors,4) = ones(ninstructors,1);
 
-A(nlum*nreps+1:2*nlum*nreps,1) = repmat(lum(:),nreps,1);
-A(nlum*nreps+1:2*nlum*nreps,2) = repmat(log10C(:),nreps,1);
-A(nlum*nreps+1:2*nlum*nreps,3) = repmat((1+nlum:2*nlum)',nreps,1);
-A(nlum*nreps+1:2*nlum*nreps,4) = ones(nlum*nreps,1);
+A(1:2*ninstructors,5) = (1:2*ninstructors)';
+A(1:2*ninstructors,7) = 1;
 
-A(1:2*nlum*nreps,5) = (1:2*nlum*nreps)';
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,1) = repmat(1-lum(:),nreps,1);
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,2) = repmat(log10C(:),nreps,1);
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,3) = repmat((nlum+1:-1:2)',nreps,1);
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,4) = zeros(nlum*nreps,1);
+
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,1) = repmat(lum(:),nreps,1);
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,2) = repmat(log10C(:),nreps,1);
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,3) = repmat((2+nlum:2*nlum+1)',nreps,1);
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,4) = ones(nlum*nreps,1);
+
+A(1:2*ninstructors+2*nlum*nreps,5) = (1:2*ninstructors+2*nlum*nreps)';
+
+A(2*ninstructors+1:2*ninstructors+2*nlum*nreps,7) = 2;
 
 A = repmat(A,nblocks,1);
 
-blocknum = repmat(1:nblocks,2*nlum*nreps,1);
+blocknum = repmat(1:nblocks,2*ninstructors+2*nlum*nreps,1);
 A(:,6) = blocknum(:);
 
 %  Now go through and shuffle the trials within the blocks.
 for i=1:nblocks
-    indx = A(:,6)==i;
-    A(indx,1:4) = Shuffle(A(indx,1:4),2);
+    for j=1:nshufflegroups
+        indx = A(:,6)==i & A(:,7)==j;
+        A(indx,1:4) = Shuffle(A(indx,1:4),2);
+    end
 end
 
 %  Features of the trials
 %
-%  luminance -- for stimulus preparation
+%  luminance -- for stimulus preparationp.run
 %  log10C -- for display
 %  lum_indx -- for record keeping
 %  trial_type -- press or release
@@ -270,6 +286,7 @@ for i=1:ntrials
     c{i}.symbol_type = 'mask';
     c{i}.trial_number = A(i,5);
     c{i}.block_number = A(i,6);
+    c{i}.repeat_priority = A(i,7);
 end
 p.conditions = c;
 

@@ -51,9 +51,13 @@ switch state
             
             p.trial.task.performance.attempted = 0;
             
+            %             nlum = length(p.trial.task.features.log10C);
+            %             p.trial.task.performance.matrix = zeros(2*nlum+2,3);
+            %             p.trial.task.performance.log10C = [-0.5 p.trial.task.features.log10C(end:-1:1) p.trial.task.features.log10C(1:end) -0.5];
+            
             nlum = length(p.trial.task.features.log10C);
-            p.trial.task.performance.matrix = zeros(2*nlum,3);
-            p.trial.task.performance.log10C = [p.trial.task.features.log10C(end:-1:1) p.trial.task.features.log10C(1:end)];
+            p.trial.task.performance.matrix = zeros(nlum+3,3);
+            p.trial.task.performance.log10C = p.trial.task.features.log10C;
             
             %  Indexing
             p.trial.task.indexing.current_trial = 1;
@@ -75,15 +79,15 @@ switch state
         
         %  Extract data from conditions cell array
         indx = p.trial.task.indexing.current_trial;
-        p.trial.task.condition = p.conditions{indx};
-        p.trial.task.condition.trial_type = p.conditions{indx}.trial_type;
-        p.trial.task.condition.symbol_type = p.conditions{indx}.symbol_type;
-        p.trial.task.condition.luminance = p.conditions{indx}.luminance;
-        p.trial.task.lum_indx = p.conditions{indx}.lum_indx;
-        p.trial.task.log10C = p.conditions{indx}.log10C;
-        p.trial.task.trial_number = p.conditions{indx}.trial_number;
-        p.trial.task.block_number = p.conditions{indx}.block_number;
-        p.trial.task.repeat_prioirty = p.conditions{indx}.repeat_priority;
+         p.trial.task.condition = p.conditions{indx};
+%         p.trial.task.condition.trial_type = p.conditions{indx}.trial_type;
+%         p.trial.task.condition.symbol_type = p.conditions{indx}.symbol_type;
+%         p.trial.task.condition.luminance = p.conditions{indx}.luminance;
+%         p.trial.task.condition.lum_indx = p.conditions{indx}.lum_indx;
+%         p.trial.task.condition.log10C = p.conditions{indx}.log10C;
+%         p.trial.task.condition.trial_number = p.conditions{indx}.trial_number;
+%         p.trial.task.condition.block_number = p.conditions{indx}.block_number;
+%         p.trial.task.condition.repeat_priority = p.conditions{indx}.repeat_priority;
         
         %  Random number generator seed for symbol masks
         p.trial.task.stimulus.symbol_masks.rng = rng;
@@ -119,8 +123,11 @@ switch state
         %  Print information to screen
         
         fprintf('START TRIAL ATTEMPT %d (%d trials of %d completed, %d remain):\n',p.trial.pldaps.iTrial,p.trial.task.performance.completed,p.trial.task.constants.maxTrials,p.trial.task.constants.maxTrials-p.trial.task.performance.completed);
-        fprintf('\tTrial %d of %d for block %d of %d.\n',p.trial.task.trial_number,p.trial.task.constants.maxTrialsPerBlock,p.trial.task.block_number,p.trial.task.constants.maxBlocks);
-        fprintf('\tThis is a %s %s trial with log contrast %0.3f.\n',upper(p.trial.task.condition.symbol_type),upper(p.trial.task.condition.trial_type),p.trial.task.log10C);
+        fprintf('\tTrial %d of %d for block %d of %d.\n',p.trial.task.condition.trial_number,p.trial.task.constants.TrialsPerBlock,p.trial.task.condition.block_number,p.trial.task.constants.maxBlocks);
+        fprintf('\tThis is a %s %s trial with log contrast %0.3f.\n',upper(p.trial.task.condition.symbol_type),upper(p.trial.task.condition.trial_type),p.trial.task.condition.log10C);
+        if(p.trial.task.training.repeat_priority>=p.trial.task.condition.repeat_priority)
+            fprintf('\tThis trial must be repeated until completed correctly.\n');
+        end
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  Clean Up and Save, post trial management
@@ -149,24 +156,24 @@ switch state
         %  Repeat the trial if it has an appropriate repeat priority.
         %  Otherwise update the trial index.
         if(p.trial.task.outcome.completed)
-            if(p.trial.task.training.repeat_priority<=p.trial.task. || p.trial.task.outcome.correct)
+            if(p.trial.task.training.repeat_priority<p.trial.task.condition.repeat_priority || p.trial.task.outcome.correct)
                 p.trial.task.indexing.next_trial = p.trial.task.indexing.current_trial+1;
             else
                 p.trial.task.indexing.next_trial = p.trial.task.indexing.current_trial;
                 p.conditions{end+1} = p.conditions{end};
             end
             
-            p.trial.task.performance.matrix(p.trial.task.lum_indx,1) = p.trial.task.performance.matrix(p.trial.task.lum_indx,1)+((p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial));
-            p.trial.task.performance.matrix(p.trial.task.lum_indx,2) = p.trial.task.performance.matrix(p.trial.task.lum_indx,2)+((p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial));
-            p.trial.task.performance.matrix(p.trial.task.lum_indx,3) = p.trial.task.performance.matrix(p.trial.task.lum_indx,3)+1;
+            p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,1) = p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,1)+((p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial));
+            p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,2) = p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,2)+((p.trial.task.outcome.correct && p.trial.task.state_variables.press_trial) || (~p.trial.task.outcome.correct && p.trial.task.state_variables.release_trial));
+            p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,3) = p.trial.task.performance.matrix(p.trial.task.condition.lum_indx,3)+1;
         else
             p.trial.task.indexing.next_trial = p.trial.task.indexing.current_trial;
             p.conditions{end+1} = p.conditions{end};
             
             if(p.trial.task.training.shuffle_aborts)
-                indx = p.trial.task.indexing.current_trial:p.trial.task.indexing.current_trial + p.trial.task.constants.maxTrialsPerBlock-p.trial.task.trial_number;
+                indx = p.trial.task.indexing.current_trial:p.trial.task.indexing.current_trial + p.trial.task.constants.TrialsPerBlock-p.trial.task.condition.trial_number;
                 
-                fprintf('\tReshuffling trials %d through %d (within block trial %d through %d)\n\n',indx(1),indx(end),p.trial.task.trial_number,p.trial.task.constants.maxTrialsPerBlock);
+                fprintf('\tReshuffling trials %d through %d (within block trial %d through %d)\n\n',indx(1),indx(end),p.trial.task.condition.trial_number,p.trial.task.constants.TrialsPerBlock);
                 
                 temp = p.conditions(indx);
                 p.conditions(indx) = Shuffle(temp);
@@ -196,12 +203,21 @@ switch state
         fprintf('\tCorrectly completed:  %d of %d (%0.3f)\n',correct,completed,correct/completed);
         fprintf('\n');
         
-        for i=1:length(p.trial.task.performance.log10C)/2
-            fprintf('\t%5.2f release:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3));
+        %         for i=1:length(p.trial.task.performance.log10C)/2
+        %             fprintf('\t%5.2f release:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3));
+        %         end
+        %         for i=1+length(p.trial.task.performance.log10C)/2 : length(p.trial.task.performance.log10C)
+        %             fprintf('\t%5.2f   press:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3),1 - p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3));
+        %         end
+        %         fprintf('\n');
+        
+        fprintf('\t%5.2f instructor:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',-Inf,p.trial.task.performance.matrix(1,1:2),sum(p.trial.task.performance.matrix(1,1:2)),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3));
+        fprintf('\t%5.2f    release:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',-Inf,p.trial.task.performance.matrix(2,1:2),sum(p.trial.task.performance.matrix(2,1:2)),p.trial.task.performance.matrix(2,1)/p.trial.task.performance.matrix(2,3),p.trial.task.performance.matrix(2,1)/p.trial.task.performance.matrix(2,3));
+        
+        for i=1:length(p.trial.task.performance.log10C)
+            fprintf('\t%5.2f      press:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i+2,1:2),sum(p.trial.task.performance.matrix(i+2,1:2)),p.trial.task.performance.matrix(i+2,2)/p.trial.task.performance.matrix(i+2,3),1 - p.trial.task.performance.matrix(i+2,2)/p.trial.task.performance.matrix(i+2,3));
         end
-        for i=1+length(p.trial.task.performance.log10C)/2 : length(p.trial.task.performance.log10C)
-            fprintf('\t%5.2f   press:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3),1 - p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3));
-        end
+        fprintf('\t%5.2f instructor:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',p.trial.task.features.instructor_log10C,p.trial.task.performance.matrix(end,1:2),sum(p.trial.task.performance.matrix(end,1:2)),p.trial.task.performance.matrix(end,1)/p.trial.task.performance.matrix(end,3),p.trial.task.performance.matrix(end,1)/p.trial.task.performance.matrix(end,3));
         fprintf('\n');
         
         fprintf('Trial aborts:\n');
@@ -235,15 +251,7 @@ switch state
         check_joystick_status;
         
         %  Display joystick status to screen
-        
-        switch p.trial.task.state_variables.trial_state
-            case 'warning'
-                joystick.display(p,p.trial.joystick.warning);
-            case 'engage'
-                joystick.display(p,p.trial.joystick.engage);
-            otherwise
-                joystick.display(p,p.trial.joystick.default);
-        end
+        display_joystick_status;
         
     case p.trial.pldaps.trialStates.framePrepareDrawing
         %  Frame PrepareDrawing is where you can prepare all drawing and
@@ -1061,8 +1069,8 @@ end
         annulus_indx = noise_ring.get_annulus(frame_width,annulus_outer_diameter,annulus_inner_diameter);
         response_cue_indx = noise_ring.get_annulus(frame_width,response_cue_outer_diameter,response_cue_inner_diameter);
         
-        M = 0.5*ones(frame_width);
-        M = noise_ring.add_ring(M,response_cue_indx,p.trial.task.condition.luminance-0.5);
+        M = p.trial.display.bgColor(1)*ones(frame_width);
+        M = noise_ring.add_ring(M,response_cue_indx,p.trial.task.condition.luminance-p.trial.display.bgColor(1));
         M = noise_ring.add_noise(M,annulus_indx,p.trial.task.features.annulus.noise_sigma);
         M = noise_ring.fix_range(M);
         
@@ -1187,11 +1195,25 @@ end
         %  Determine status of joystick against thresholds
         switch p.trial.task.state_variables.trial_state
             case 'warning'
-                [zone,p.trial.joystick.warning.position] = joystick.zones(p.trial.joystick.warning);
+                [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.warning);
             case 'engage'
-                [zone,p.trial.joystick.engage.position] = joystick.zones(p.trial.joystick.engage);
+                [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.engage);
+            case 'response'
+                if(p.trial.task.training.relative_response_threshold)
+                    if(isnan(p.trial.task.timing.response.start_time))
+                        p.trial.joystick.response = p.trial.joystick.default;
+                        p.trial.joystick.response.threshold(1) = max(p.trial.joystick.position-3,p.trial.joystick.response.threshold(1));
+                        p.trial.joystick.response.threshold(2) = max(p.trial.joystick.position-2,p.trial.joystick.response.threshold(2));
+                        p.trial.joystick.response.threshold(3) = min(p.trial.joystick.position+2,p.trial.joystick.response.threshold(3));
+                        p.trial.joystick.response.threshold(4) = min(p.trial.joystick.position+3,p.trial.joystick.response.threshold(4));
+                    end
+                    [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.response);
+                else
+                    p.trial.joystick.response = p.trial.joystic
+                    [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.default);
+                end
             otherwise
-                [zone,p.trial.joystick.default.position] = joystick.zones(p.trial.joystick.default);
+                [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.default);
         end
         %  Set joystick state variables
         p.trial.task.state_variables.joystick_released = zone==1;
@@ -1200,6 +1222,29 @@ end
         p.trial.task.state_variables.joystick_press_buffer = zone==4;
         p.trial.task.state_variables.joystick_pressed = zone==5;
     end
+
+    function display_joystick_status
+        %  display_joystick_status
+        %
+        %  This function calls the function to display the joystick status
+        %  to the console screen
+        
+        switch p.trial.task.state_variables.trial_state
+            case 'warning'
+                joystick.display(p,p.trial.joystick.position,p.trial.joystick.warning.threshold);
+            case 'engage'
+                joystick.display(p,p.trial.joystick.position,p.trial.joystick.engage.threshold);
+            case 'response'
+                if(p.trial.task.training.relative_response_threshold)
+                    joystick.display(p,p.trial.joystick.position,p.trial.joystick.response.threshold);
+                else
+                    joystick.display(p,p.trial.joystick.position,p.trial.joystick.default.threshold);
+                end
+            otherwise
+                joystick.display(p,p.trial.joystick.position,p.trial.joystick.default.threshold);
+        end
+    end
+
 
     function check_fixation_status
         %  check_fixation_status
