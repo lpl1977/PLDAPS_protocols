@@ -50,13 +50,11 @@ switch state
             p.trial.task.performance = p.trial.task.outcome;
             
             p.trial.task.performance.attempted = 0;
-            
-            %             nlum = length(p.trial.task.features.log10C);
-            %             p.trial.task.performance.matrix = zeros(2*nlum+2,3);
-            %             p.trial.task.performance.log10C = [-0.5 p.trial.task.features.log10C(end:-1:1) p.trial.task.features.log10C(1:end) -0.5];
-            
+
             nlum = length(p.trial.task.features.log10C);
-            p.trial.task.performance.matrix = zeros(nlum+3,3);
+                        
+            instructor_trials = p.trial.task.features.ninstructors > 0;
+            p.trial.task.performance.matrix = zeros(nlum+1+2*instructor_trials,3);
             p.trial.task.performance.log10C = p.trial.task.features.log10C;
             
             %  Indexing
@@ -80,14 +78,6 @@ switch state
         %  Extract data from conditions cell array
         indx = p.trial.task.indexing.current_trial;
          p.trial.task.condition = p.conditions{indx};
-%         p.trial.task.condition.trial_type = p.conditions{indx}.trial_type;
-%         p.trial.task.condition.symbol_type = p.conditions{indx}.symbol_type;
-%         p.trial.task.condition.luminance = p.conditions{indx}.luminance;
-%         p.trial.task.condition.lum_indx = p.conditions{indx}.lum_indx;
-%         p.trial.task.condition.log10C = p.conditions{indx}.log10C;
-%         p.trial.task.condition.trial_number = p.conditions{indx}.trial_number;
-%         p.trial.task.condition.block_number = p.conditions{indx}.block_number;
-%         p.trial.task.condition.repeat_priority = p.conditions{indx}.repeat_priority;
         
         %  Random number generator seed for symbol masks
         p.trial.task.stimulus.symbol_masks.rng = rng;
@@ -110,10 +100,11 @@ switch state
         %  Initialize array of texture indices (seems to work more smoothly
         %  to clear at end of trial).
         
-        p.trial.task.stimulus.noise_ring.textureIndex = NaN(p.trial.pldaps.maxFrames,1);
+        p.trial.task.stimulus.noise_ring.textureIndex = zeros(p.trial.pldaps.maxFrames,1);
         
         %  Initialize trial state variables
         
+        p.trial.task.state_variables.noise_frame = 0;
         p.trial.task.state_variables.trial_state = 'start';
         p.trial.task.state_variables.release_trial = strcmp('release',p.trial.task.condition.trial_type);
         p.trial.task.state_variables.press_trial = ~p.trial.task.state_variables.release_trial;
@@ -133,9 +124,8 @@ switch state
         %  Clean Up and Save, post trial management
         
         %  Close the textureIndex
-        indx = ~isnan(p.trial.task.stimulus.noise_ring.textureIndex);
-        if(any(indx))
-            Screen('Close',p.trial.task.stimulus.noise_ring.textureIndex(indx));
+        if(p.trial.task.state_variables.noise_frame>0)
+            Screen('Close',p.trial.task.stimulus.noise_ring.textureIndex(1:p.trial.task.state_variables.noise_frame));
         end
         if(p.trial.task.training.use_symbol_masks)
             Screen('Close',p.trial.task.stimulus.symbol_masks.textureIndex);
@@ -198,37 +188,34 @@ switch state
         press_drift_errors = double(p.trial.task.performance.press_drift_error);
         misses = double(p.trial.task.performance.miss);
         
+        instructor_trials = p.trial.task.features.ninstructors > 0;
+        
         fprintf('Current performance:\n');
         fprintf('\tCompleted:            %d of %d (%0.3f)\n',completed,attempted,completed/attempted);
         fprintf('\tCorrectly completed:  %d of %d (%0.3f)\n',correct,completed,correct/completed);
         fprintf('\n');
         
-        %         for i=1:length(p.trial.task.performance.log10C)/2
-        %             fprintf('\t%5.2f release:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3),p.trial.task.performance.matrix(i,1)/p.trial.task.performance.matrix(i,3));
-        %         end
-        %         for i=1+length(p.trial.task.performance.log10C)/2 : length(p.trial.task.performance.log10C)
-        %             fprintf('\t%5.2f   press:  %4d R %4d P %4d T, %5.2f correct %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i,1:2),sum(p.trial.task.performance.matrix(i,1:2)),p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3),1 - p.trial.task.performance.matrix(i,2)/p.trial.task.performance.matrix(i,3));
-        %         end
-        %         fprintf('\n');
-        
-        fprintf('\t%5.2f instructor:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',-Inf,p.trial.task.performance.matrix(1,1:2),sum(p.trial.task.performance.matrix(1,1:2)),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3));
-        fprintf('\t%5.2f    release:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',-Inf,p.trial.task.performance.matrix(2,1:2),sum(p.trial.task.performance.matrix(2,1:2)),p.trial.task.performance.matrix(2,1)/p.trial.task.performance.matrix(2,3),p.trial.task.performance.matrix(2,1)/p.trial.task.performance.matrix(2,3));
-        
-        for i=1:length(p.trial.task.performance.log10C)
-            fprintf('\t%5.2f      press:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i+2,1:2),sum(p.trial.task.performance.matrix(i+2,1:2)),p.trial.task.performance.matrix(i+2,2)/p.trial.task.performance.matrix(i+2,3),1 - p.trial.task.performance.matrix(i+2,2)/p.trial.task.performance.matrix(i+2,3));
+        if(instructor_trials)
+            fprintf('Instruct R (%5.2f):  %4d R %4d P %4d T, %5.2f correct | %5.2f R\n',p.trial.task.features.instructor_log10C,p.trial.task.performance.matrix(1,:),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3),p.trial.task.performance.matrix(1,1)/p.trial.task.performance.matrix(1,3));
         end
-        fprintf('\t%5.2f instructor:  %4d R %4d P %4d T, %5.2f correct | %5.2f release\n',p.trial.task.features.instructor_log10C,p.trial.task.performance.matrix(end,1:2),sum(p.trial.task.performance.matrix(end,1:2)),p.trial.task.performance.matrix(end,1)/p.trial.task.performance.matrix(end,3),p.trial.task.performance.matrix(end,1)/p.trial.task.performance.matrix(end,3));
+        for i=1:length(p.trial.task.performance.log10C)
+            fprintf('         R (%5.2f):  %4d R %4d P %4d T, %5.2f correct | %5.2f R\n',p.trial.task.performance.log10C(i),p.trial.task.performance.matrix(i+instructor_trials,:),p.trial.task.performance.matrix(i+instructor_trials,1)/p.trial.task.performance.matrix(i+instructor_trials,3),p.trial.task.performance.matrix(i+instructor_trials,1)/p.trial.task.performance.matrix(i+instructor_trials,3));
+        end
+        fprintf('         P (%5.2f):  %4d R %4d P %4d T, %5.2f correct | %5.2f R\n',-Inf,p.trial.task.performance.matrix(end-instructor_trials,:),p.trial.task.performance.matrix(end-instructor_trials,2)/p.trial.task.performance.matrix(end-instructor_trials,3),p.trial.task.performance.matrix(end-instructor_trials,1)/p.trial.task.performance.matrix(end-instructor_trials,3));
+        if(instructor_trials)
+            fprintf('Instruct P (%5.2f):  %4d R %4d P %4d T, %5.2f correct | %5.2f R\n',-Inf,p.trial.task.performance.matrix(end,:),p.trial.task.performance.matrix(end,2)/p.trial.task.performance.matrix(end,3),p.trial.task.performance.matrix(end,1)/p.trial.task.performance.matrix(end,3));
+        end
         fprintf('\n');
         
         fprintf('Trial aborts:\n');
-        fprintf('\tFixation breaks:     %3d of %d (%0.3f)\n',fixation_breaks,attempted,fixation_breaks/attempted);
-        fprintf('\tFailed to initiate:  %3d of %d (%0.3f)\n',failed_to_initiate,attempted,failed_to_initiate/attempted);
-        fprintf('\tWarning elapsed:     %3d of %d (%0.3f)\n',warning_elapsed,attempted,warning_elapsed/attempted);
-        fprintf('\tEarly releases:      %3d of %d (%0.3f)\n',early_releases,attempted,early_releases/attempted);
-        fprintf('\tEarly presses:       %3d of %d (%0.3f)\n',early_presses,attempted,early_presses/attempted);
-        fprintf('\tRelease drift errors:%3d of %d (%0.3f)\n',release_drift_errors,attempted,release_drift_errors/attempted);
-        fprintf('\tPress drift errors:  %3d of %d (%0.3f)\n',press_drift_errors,attempted,press_drift_errors/attempted);
-        fprintf('\tMisses:              %3d of %d (%0.3f)\n',misses,attempted,misses/attempted);
+        fprintf('\tFixation breaks:      %3d of %d (%0.3f)\n',fixation_breaks,attempted,fixation_breaks/attempted);
+        fprintf('\tFailed to initiate:   %3d of %d (%0.3f)\n',failed_to_initiate,attempted,failed_to_initiate/attempted);
+        fprintf('\tWarning elapsed:      %3d of %d (%0.3f)\n',warning_elapsed,attempted,warning_elapsed/attempted);
+        fprintf('\tEarly releases:       %3d of %d (%0.3f)\n',early_releases,attempted,early_releases/attempted);
+        fprintf('\tEarly presses:        %3d of %d (%0.3f)\n',early_presses,attempted,early_presses/attempted);
+        fprintf('\tRelease drift errors: %3d of %d (%0.3f)\n',release_drift_errors,attempted,release_drift_errors/attempted);
+        fprintf('\tPress drift errors:   %3d of %d (%0.3f)\n',press_drift_errors,attempted,press_drift_errors/attempted);
+        fprintf('\tMisses:               %3d of %d (%0.3f)\n',misses,attempted,misses/attempted);
         fprintf('\n');
         
         %  Check if we have completed conditions; if so, we're finished.
@@ -771,7 +758,6 @@ switch state
                 
                 if(isnan(p.trial.task.timing.response.start_time))
                     p.trial.task.timing.response.start_time = GetSecs;
-                    p.trial.task.timing.response.start_frame = p.trial.iFrame;
                     p.trial.task.outcome.reaction_time = NaN;
                     
                     ShowResponseCue;
@@ -823,6 +809,7 @@ switch state
                             end
                             p.trial.task.timing.response.start_time = NaN;
                             p.trial.task.timing.buffer.start_time = NaN;
+                            p.trial.task.state_variables.waiting_for_release = false;
                             
                         elseif(p.trial.task.state_variables.joystick_release_buffer)
                             
@@ -856,7 +843,7 @@ switch state
                             end
                             
                             p.trial.task.outcome.response_duration = GetSecs - p.trial.task.outcome.reaction_time - p.trial.task.timing.response.start_time;
-                            fprintf('\tResponse duration was %0.3f sec.\n',p.trial.task.outcome.response_duration);
+                            %fprintf('\tResponse duration was %0.3f sec.\n',p.trial.task.outcome.response_duration);
                             
                             if(p.trial.task.state_variables.press_trial)
                                 p.trial.task.state_variables.trial_state = 'reward_delay';
@@ -919,7 +906,7 @@ switch state
                 if(isnan(p.trial.task.timing.error_delay.start_time))
                     
                     if(p.trial.task.training.release_for_reward && p.trial.task.state_variables.waiting_for_release)
-                        fprintf('ERROR DELAY.  %s must completely release joystick and fixate and await feedback %0.3f sec (%0.3f remain).\n',p.trial.session.subject,p.trial.task.timing.error_delay.duration,p.trial.task.timing.error_delay.duration - p.trial.task.outcome.response_duration);
+                        fprintf('ERROR DELAY.  %s must completely release joystick, fixate and await feedback %0.3f sec (%0.3f remain).\n',p.trial.session.subject,p.trial.task.timing.error_delay.duration,p.trial.task.timing.error_delay.duration - p.trial.task.outcome.response_duration);
                     else
                         fprintf('ERROR DELAY.  %s must fixate and await feedback for %0.3f sec.\n',p.trial.session.subject,p.trial.task.timing.error_delay.duration);
                     end
@@ -943,15 +930,41 @@ switch state
                         p.trial.task.state_variables.waiting_for_release = false;
                     end
                     
-                elseif(~p.trial.task.training.release_for_reward || p.trial.task.state_variables.joystick_released)
+                elseif(p.trial.task.training.release_for_reward && p.trial.task.state_variables.waiting_for_release)
+                    if(isnan(p.trial.task.timing.error_delay.eligible_start_time))
+                        fprintf('\t%s has exceeded the error delay and is eligible for another trial once he releases the joystick.\n',p.trial.session.subject);
+                        p.trial.task.timing.error_delay.eligible_start_time = GetSecs;
+                    end
+                    if(p.trial.task.state_variables.joystick_released)
+                        p.trial.task.outcome.response_duration = p.trial.task.outcome.response_duration + GetSecs - p.trial.task.timing.error_delay.start_time;
+                        fprintf('\t%s released joystick at %0.3f sec; response duration was %0.3f sec.\n',p.trial.session.subject,GetSecs - p.trial.task.timing.error_delay.start_time,p.trial.task.outcome.response_duration);
+                        p.trial.task.state_variables.waiting_for_release = false;
+                    end
+                elseif(~p.trial.task.training.release_for_reward || ~p.trial.task.state_variables.waiting_for_release)
+                    p.trial.task.timing.error_delay.eligible_start_time = GetSecs;
+                end
+                
+                if(~isnan(p.trial.task.timing.error_delay.eligible_start_time) && ~p.trial.task.state_variables.waiting_for_release)
                     
-                    %  Monkey completed error delay
-                    fprintf('\t%s completed error delay and does not get a reward.\n',p.trial.session.subject);
+                    %  Monkey completed error delay to se can get next
+                    %  trial now!
+                    fprintf('\t%s completed error delay.  He gets another trial!\n',p.trial.session.subject);
                     p.trial.task.timing.error_delay.start_time = NaN;
+                    p.trial.task.timing.error_delay.eligible_start_time = NaN;
                     p.trial.task.outcome.correct = false;
                     p.trial.task.outcome.completed = true;
                     p.trial.task.state_variables.trial_state = 'error';
                 end
+                
+%                 elseif(~p.trial.task.training.release_for_reward || p.trial.task.state_variables.joystick_released)
+%                     
+%                     %  Monkey completed error delay
+%                     fprintf('\t%s completed error delay and does not get a reward.\n',p.trial.session.subject);
+%                     p.trial.task.timing.error_delay.start_time = NaN;
+%                     p.trial.task.outcome.correct = false;
+%                     p.trial.task.outcome.completed = true;
+%                     p.trial.task.state_variables.trial_state = 'error';
+%                 end
                 
                 
             case 'reward_delay'
@@ -967,7 +980,7 @@ switch state
                 if(isnan(p.trial.task.timing.reward_delay.start_time))
                     
                     if(p.trial.task.training.release_for_reward && p.trial.task.state_variables.waiting_for_release)
-                        fprintf('REWARD DELAY.  %s must release joystick and fixate and await feedback for %0.3f sec (%0.3f sec remain).\n',p.trial.session.subject,p.trial.task.timing.reward_delay.duration,p.trial.task.timing.reward_delay.duration - p.trial.task.outcome.response_duration);
+                        fprintf('REWARD DELAY.  %s must release joystick, fixate and await feedback for %0.3f sec (%0.3f sec remain).\n',p.trial.session.subject,p.trial.task.timing.reward_delay.duration,p.trial.task.timing.reward_delay.duration - p.trial.task.outcome.response_duration);
                     else
                         fprintf('REWARD DELAY.  %s must fixate and await feedback for %0.3f sec.\n',p.trial.session.subject,p.trial.task.timing.reward_delay.duration);
                     end
@@ -990,13 +1003,27 @@ switch state
                         fprintf('\t%s released joystick at %0.3f sec; response duration was %0.3f sec.\n',p.trial.session.subject,GetSecs - p.trial.task.timing.reward_delay.start_time,p.trial.task.outcome.response_duration);
                         p.trial.task.state_variables.waiting_for_release = false;
                     end
-                    
-                elseif(~p.trial.task.training.release_for_reward || p.trial.task.state_variables.joystick_released)
+                elseif(p.trial.task.training.release_for_reward && p.trial.task.state_variables.waiting_for_release)
+                    if(isnan(p.trial.task.timing.reward_delay.eligible_start_time))
+                        fprintf('\t%s has exceeded the reward delay and is eligible for a reward once he releases the joystick.\n',p.trial.session.subject);
+                        p.trial.task.timing.reward_delay.eligible_start_time = GetSecs;
+                    end
+                    if(p.trial.task.state_variables.joystick_released)
+                        p.trial.task.outcome.response_duration = p.trial.task.outcome.response_duration + GetSecs - p.trial.task.timing.reward_delay.start_time;
+                        fprintf('\t%s released joystick at %0.3f sec; response duration was %0.3f sec.\n',p.trial.session.subject,GetSecs - p.trial.task.timing.reward_delay.start_time,p.trial.task.outcome.response_duration);
+                        p.trial.task.state_variables.waiting_for_release = false;
+                    end
+                elseif(~p.trial.task.training.release_for_reward || ~p.trial.task.state_variables.waiting_for_release)
+                    p.trial.task.timing.reward_delay.eligible_start_time = GetSecs;
+                end
+                
+                if(~isnan(p.trial.task.timing.reward_delay.eligible_start_time) && ~p.trial.task.state_variables.waiting_for_release)
                     
                     %  Monkey completed reward delay so he can get his
                     %  reward now!
                     fprintf('\t%s completed reward delay.  He gets a reward!\n',p.trial.session.subject);
                     p.trial.task.timing.reward_delay.start_time = NaN;
+                    p.trial.task.timing.reward_delay.eligible_start_time = NaN;
                     p.trial.task.outcome.correct = true;
                     p.trial.task.outcome.completed = true;
                     p.trial.task.state_variables.trial_state = 'reward';
@@ -1059,10 +1086,11 @@ end
         %  repsonse should be.  It is embedded in a noise annulus.
         
         win = p.trial.display.ptr;
-        frame_index = p.trial.iFrame-p.trial.task.timing.response.start_frame+1;
+        frame_index = p.trial.task.state_variables.noise_frame + 1;
+        p.trial.task.state_variables.noise_frame = frame_index;
         
         annulus_outer_diameter = p.trial.task.features.annulus.outer_diameter;
-        frame_width = annulus_outer_diameter+1;
+        frame_width = annulus_outer_diameter;
         annulus_inner_diameter = p.trial.task.features.annulus.inner_diameter;
         response_cue_outer_diameter = p.trial.task.features.response.diameter+2*p.trial.task.features.response.linewidth;
         response_cue_inner_diameter = p.trial.task.features.response.diameter;

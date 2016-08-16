@@ -1,4 +1,4 @@
-function p = setup_v02(p)
+function p = setup_v03(p)
 %  PLDAPS SETUP FILE
 %  PACKAGE:  set_trainer
 %  TRIAL FUNCTION:  there_is_no_set.only_zuul
@@ -112,8 +112,10 @@ p.trial.task.timing.timeout.start_time = NaN;
 p.trial.task.timing.error_penalty.start_time = NaN;
 
 p.trial.task.timing.reward_delay.start_time = NaN;
+p.trial.task.timing.reward_delay.eligible_start_time = NaN;
 
 p.trial.task.timing.error_delay.start_time = NaN;
+p.trial.task.timing.error_delay.eligible_start_time = NaN;
 
 p.trial.task.timing.buffer.start_time = NaN;
 p.trial.task.timing.buffer.maximum_time = 10/120;
@@ -189,20 +191,29 @@ feval(str2func(strcat('set_trainer.there_is_no_set.',p.trial.session.subject)),p
 
 %  The trials are organized into blocks.  There are nblocks and
 %  2*nlum*nreps trials per block.  Within a block the trials will be
-%  shuffled.  There are ninstructors for press at log10C = -0.5 and
-%  ninstructors for release at log10C = -Inf at the start of each block.
+%  shuffled.  There are ninstructors for release at log10C = -0.5 and
+%  ninstructors for press at log10C = -Inf at the start of each block.
 
 %  Set up conditions matrix
 log10C = p.trial.task.features.log10C;
-lum = p.trial.display.bgColor(1) + (1-p.trial.display.bgColor(1))*power(10,log10C);
+bgColor =  p.trial.display.bgColor(1);
+
+ninstructors = p.trial.task.features.ninstructors;
+nreps = p.trial.task.features.nreps;
+ntotal = p.trial.task.features.ntotal;
+
+lum = bgColor(1) - (1-bgColor(1))*power(10,log10C);
 nlum = length(lum);
 
-p.trial.task.features.instructor_log10C = -0.5;
-instructor_lum = p.trial.display.bgColor(1) + (1-p.trial.display.bgColor(1))*power(10,p.trial.task.features.instructor_log10C);
+instructor_trials = ninstructors > 0;
 
-ninstructors = 4;
-nreps = 10;
-ntotal = 1000;
+if(instructor_trials)
+    instructor_log10C = p.trial.task.features.instructor_log10C;
+    instructor_lum = bgColor - (1-bgColor)*power(10,instructor_log10C);
+    nshufflegroups = 2;
+else
+    nshufflegroups = 1;
+end
 
 p.trial.task.constants.TrialsPerBlock = 2*nlum*nreps + 2*ninstructors;
 
@@ -212,12 +223,10 @@ p.trial.task.constants.maxBlocks = nblocks;
 
 p.trial.task.constants.maxTrials = p.trial.task.constants.maxBlocks*p.trial.task.constants.TrialsPerBlock;
 
-nshufflegroups = 2;
-
 %  Column order:
 %  1--luminance
 %  2--log10C
-%  3--luminance index -- into matrix for performance display purposes
+%  3--luminance index into matrix for performance display purposes
 %  4--choice (1==press, 0==release)
 %  5--within block trial number
 %  6--block number
@@ -226,36 +235,38 @@ nshufflegroups = 2;
 
 A = zeros(p.trial.task.constants.TrialsPerBlock,7);
 
-%  Release instructors
-A(1:ninstructors,1) = p.trial.display.bgColor(1);
-A(1:ninstructors,2) = -Inf;
-A(1:ninstructors,3) = 1;
-A(1:ninstructors,4) = 0;
-
-%  Press Instructors
-A(ninstructors+1:2*ninstructors,1) = instructor_lum;
-A(ninstructors+1:2*ninstructors,2) = p.trial.task.features.instructor_log10C;
-A(ninstructors+1:2*ninstructors,3) = nlum+3;
-A(ninstructors+1:2*ninstructors,4) = 1;
-
-A(1:2*ninstructors,5) = (1:2*ninstructors)';
-A(1:2*ninstructors,7) = 1;
-
-%  Release trials
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,1) = p.trial.display.bgColor(1);
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,2) = -Inf;
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,3) = 2;
-A(2*ninstructors+1:2*ninstructors+nlum*nreps,4) = 0;
+if(instructor_trials)
+    %  Press Instructors
+    A(1:ninstructors,1) = bgColor;
+    A(1:ninstructors,2) = -Inf;
+    A(1:ninstructors,3) = nlum+3;
+    A(1:ninstructors,4) = 1;
+    
+    %  Release Instructors
+    A(ninstructors+1:2*ninstructors,1) = instructor_lum;
+    A(ninstructors+1:2*ninstructors,2) = instructor_log10C;
+    A(ninstructors+1:2*ninstructors,3) = 1;
+    A(ninstructors+1:2*ninstructors,4) = 0;
+    
+    A(1:2*ninstructors,5) = (1:2*ninstructors)';
+    A(1:2*ninstructors,7) = 1;
+end
 
 %  Press trials
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,1) = bgColor;
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,2) = -Inf;
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,3) = nlum+1+instructor_trials;
+A(2*ninstructors+1:2*ninstructors+nlum*nreps,4) = 1;
+
+%  Release trials
 A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,1) = repmat(lum(:),nreps,1);
 A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,2) = repmat(log10C(:),nreps,1);
-A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,3) = repmat((3:nlum+2)',nreps,1);
-A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,4) = 1;
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,3) = repmat((1+instructor_trials:nlum+instructor_trials)',nreps,1);
+A(2*ninstructors+nlum*nreps+1:2*ninstructors+2*nlum*nreps,4) = 0;
 
 A(1:2*ninstructors+2*nlum*nreps,5) = (1:2*ninstructors+2*nlum*nreps)';
 
-A(2*ninstructors+1:2*ninstructors+2*nlum*nreps,7) = 2;
+A(2*ninstructors+1:2*ninstructors+2*nlum*nreps,7) = 1+instructor_trials;
 
 A = repmat(A,nblocks,1);
 
@@ -263,6 +274,7 @@ blocknum = repmat(1:nblocks,2*ninstructors+2*nlum*nreps,1);
 A(:,6) = blocknum(:);
 
 %  Now go through and shuffle the trials within the blocks.
+
 for i=1:nblocks
     for j=1:nshufflegroups
         indx = A(:,6)==i & A(:,7)==j;
