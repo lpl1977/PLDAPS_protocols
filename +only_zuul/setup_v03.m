@@ -1,7 +1,7 @@
 function p = setup_v03(p)
 %  PLDAPS SETUP FILE
-%  PACKAGE:  set_trainer
-%  TRIAL FUNCTION:  there_is_no_set.only_zuul
+%  PACKAGE:  only_zuul
+%  TRIAL FUNCTION:  trial_function
 
 %
 %  This version of the setup file has a conditions matrix which has trials
@@ -10,17 +10,15 @@ function p = setup_v03(p)
 %
 
 %  Set trial master function
-p.trial.pldaps.trialFunction = 'set_trainer.there_is_no_set.only_zuul';
+p.trial.pldaps.trialFunction = 'only_zuul.trial_function';
 
 %  Get default colors and put the default bit names in
 p = defaultColors(p);
 p = defaultBitNames(p);
 
 % dot sizes for drawing
-p.trial.stimulus.eyeW      = 8;    % eye indicator width in pixels
-p.trial.stimulus.fixdotW   = 8;    % width of the fixation dot
-p.trial.stimulus.targdotW  = 8;    % width of the target dot
-p.trial.stimulus.cursorW   = 8;   % cursor width in pixels
+p.trial.stimulus.eyeW      = 8;    % eye indicator width in pixels (for console display)
+p.trial.stimulus.cursorW   = 8;    % cursor width in pixels (for console display)
 
 %  Put additional colors into the human and monkey CLUT
 p.trial.display.humanCLUT(16,:) = [0 0 1];

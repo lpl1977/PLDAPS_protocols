@@ -1,13 +1,16 @@
-function p = only_zuul(p,state)
-%p = only_zuul(p,state)
+function p = trial_function(p,state)
+%  PLDAPS trial function for set task
 %
-%  PLDAPS trial function for set game training aka there is no set
+%  p = only_zuul.trial_function(p,state)
 
-%  Call default trial function for state dependent steps
+%
+%  Call default trial function for general state dependent steps not
+%  defined here
+%
 pldapsDefaultTrialFunction(p,state);
 
 %
-%  Switch frame states
+%  Custom defined state dependent steps
 %
 switch state
     
@@ -28,7 +31,7 @@ switch state
         end
         
         %  Set subject specific parameters / actions
-        feval(str2func(strcat('set_trainer.there_is_no_set.',p.trial.session.subject)),p);
+        feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
         
         %  Initialize trial outcome
         p.trial.task.outcome.correct = false;
@@ -207,15 +210,15 @@ switch state
         end
         fprintf('\n');
         
-        fprintf('Trial aborts:\n');
-        fprintf('\tFixation breaks:      %3d of %d (%0.3f)\n',fixation_breaks,attempted,fixation_breaks/attempted);
-        fprintf('\tFailed to initiate:   %3d of %d (%0.3f)\n',failed_to_initiate,attempted,failed_to_initiate/attempted);
-        fprintf('\tWarning elapsed:      %3d of %d (%0.3f)\n',warning_elapsed,attempted,warning_elapsed/attempted);
-        fprintf('\tEarly releases:       %3d of %d (%0.3f)\n',early_releases,attempted,early_releases/attempted);
-        fprintf('\tEarly presses:        %3d of %d (%0.3f)\n',early_presses,attempted,early_presses/attempted);
-        fprintf('\tRelease drift errors: %3d of %d (%0.3f)\n',release_drift_errors,attempted,release_drift_errors/attempted);
-        fprintf('\tPress drift errors:   %3d of %d (%0.3f)\n',press_drift_errors,attempted,press_drift_errors/attempted);
-        fprintf('\tMisses:               %3d of %d (%0.3f)\n',misses,attempted,misses/attempted);
+        fprintf('Trial aborts (%d of %d trials):\n',attempted-completed,attempted);
+        fprintf('\tFixation breaks:      %3d\n',fixation_breaks);
+        fprintf('\tFailed to initiate:   %3d\n',failed_to_initiate);
+        fprintf('\tWarning elapsed:      %3d\n',warning_elapsed);
+        fprintf('\tEarly releases:       %3d\n',early_releases);
+        fprintf('\tEarly presses:        %3d\n',early_presses);
+        fprintf('\tRelease drift errors: %3d\n',release_drift_errors);
+        fprintf('\tPress drift errors:   %3d\n',press_drift_errors);
+        fprintf('\tMisses:               %3d\n',misses);
         fprintf('\n');
         
         %  Check if we have completed conditions; if so, we're finished.
@@ -235,19 +238,21 @@ switch state
         check_fixation_status;
         
         %  Get current joystick status
-        check_joystick_status;
-        
-        %  Display joystick status to screen
-        display_joystick_status;
+         check_joystick_status;
+         
+         %  Display joystick status to screen
+         display_joystick_status;
         
     case p.trial.pldaps.trialStates.framePrepareDrawing
         %  Frame PrepareDrawing is where you can prepare all drawing and
         %  task state control.
         
+        %  NOTE:  AT END OF THIS CASE I DRAW THE FIXATION WINDOW
+        
         %
-        %  Check trial time first; go to timeout if exceeds maximum wait
-        %  time
+        %  Check trial time first; end trial if exceeds maximum
         %
+        
         if(p.trial.ttime > p.trial.pldaps.maxTrialLength-p.trial.task.constants.minTrialTime)
             fprintf('\t%s did not initiate trial within %0.3f sec.\n',p.trial.session.subject,p.trial.pldaps.maxTrialLength-60);
             p.trial.task.outcome.failed_to_initiate = true;
@@ -444,7 +449,7 @@ switch state
                     fprintf('WARNING started for %0.3f sec.\n',p.trial.task.timing.warning.duration);
                     
                     %  Play the warning until he returns joystick to
-                    %  appropriate position
+                    %  appropriate position                    
                     pds.audio.play(p,'warning',0);
                     
                 elseif(p.trial.task.timing.warning.start_time > GetSecs - p.trial.task.timing.warning.duration)
@@ -877,7 +882,7 @@ switch state
                         %  timeout.
                         
                         fprintf('\t%s broke fixation after %0.3f sec.\n',p.trial.session.subject,GetSecs-p.trial.task.timing.response.start_time);
-                        p.trial.task.fixation_breaks = p.trial.task.fixation_breaks+1;
+                        p.trial.task.fixation_break = true;
                         
                         p.trial.task.timing.response.start_time = NaN;
                         p.trial.task.state_variables.trial_state = 'timeout';
@@ -1051,6 +1056,10 @@ switch state
                 end
                 
         end
+        
+        %  Display fixation window
+        display_fixation_window;
+        
 end
 
 %  NESTED FUNCTIONS BELOW
@@ -1272,12 +1281,21 @@ end
         end
     end
 
+    function display_fixation_window
+        %  display_fixation_window
+        %
+        %  This function displays the fixation window   
+        win = p.trial.display.overlayptr;        
+        width = p.trial.stimulus.fpWin;
+        baseRect = [0 0 width(1) width(2)];
+        centeredRect = CenterRectOnPointd(baseRect, p.trial.display.ctr(1), p.trial.display.ctr(2));
+        color = p.trial.display.clut.hCyan;
+        Screen('FrameRect',win,color,centeredRect);
+    end
 
     function check_fixation_status
-        %  check_fixation_status
-        
-        %  Set fixation status
-        p.trial.task.state_variables.fixating = true;
-        
+        %  Check fixation status
+        width = p.trial.stimulus.fpWin;        
+        p.trial.task.state_variables.fixating = squarewindow(~p.trial.task.training.enforce_fixation,p.trial.display.ctr(1:2)-[p.trial.eyeX p.trial.eyeY],width(1),width(2));
     end
 end

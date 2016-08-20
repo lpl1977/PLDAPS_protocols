@@ -1,15 +1,21 @@
 function Murray(p)
-%  TRIAL PARAMETER FILE
-%  PACKAGE:  set_trainer
-%  TRIAL FUNCTION:  there_is_no_set.only_zuul
+%  PLDAPS TRIAL PARAMETER FILE
+%  PACKAGE:  only_zuul
+%  TRIAL FUNCTION:  trial_function
 %  SUBJECT:  Murray
+
+%
+%  Constants for Eyelink calibration
+%
+p.trial.stimulus.fixdotW = 48;  % Calibration target size in pixels
+p.trial.stimulus.fpWin = p.trial.display.ppd*[10 10] ; % rectangular fixation window in pixels
 
 %
 %  REWARDS
 %
 
 %  Reward amounts
-p.trial.stimulus.reward_amount = 0.5;
+p.trial.stimulus.reward_amount = 0.3;
 
 %
 %  TIMING
@@ -19,9 +25,8 @@ p.trial.task.timing.delay.duration = 0.75;
 
 p.trial.task.timing.symbol.duration = 0.75;
 
-%p.trial.task.timing.reward_delay.duration = 0.75;
-p.trial.task.timing.reward_delay.duration = 0;
-
+%  Randomized reward / error delay duration.
+p.trial.task.timing.reward_delay.duration = min(exprnd(0.25),0.5);
 p.trial.task.timing.error_delay.duration = p.trial.task.timing.reward_delay.duration;
 
 %
@@ -34,6 +39,8 @@ p.trial.task.training.release_for_reward = true;
 p.trial.task.training.shuffle_aborts = false;
 p.trial.task.training.shuffle_repeats = false;
 p.trial.task.training.relative_response_threshold = true;
+
+p.trial.task.training.enforce_fixation = false;
 
 
 %
