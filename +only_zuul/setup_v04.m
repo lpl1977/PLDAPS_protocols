@@ -1,12 +1,11 @@
-function p = setup_v03(p)
+function p = setup_v04(p)
 %  PLDAPS SETUP FILE
 %  PACKAGE:  only_zuul
 %  TRIAL FUNCTION:  trial_function
 
 %
-%  This version of the setup file has a conditions matrix which has trials
-%  randomly shuffled within blocks.  There is as of yet no noise and I only
-%  anticipate one or a few very easilty distinguishable contrasts.
+%  This version of the setup file has SET and notset trials in addition to
+%  mask trials.
 %
 
 %  Set trial master function
@@ -17,8 +16,8 @@ p = defaultColors(p);
 p = defaultBitNames(p);
 
 % dot sizes for drawing
-p.trial.stimulus.eyeW      = 8;    % eye indicator width in pixels (for console display)
-p.trial.stimulus.cursorW   = 8;    % cursor width in pixels (for console display)
+p.trial.stimulus.eyeW = 8;      % eye indicator width in pixels (for console display)
+p.trial.stimulus.cursorW = 8;   % cursor width in pixels (for console display)
 
 %  Put additional colors into the human and monkey CLUT
 p.trial.display.humanCLUT(16,:) = [0 0 1];
@@ -158,7 +157,11 @@ p.trial.task.features.annulus.noise_sigma = 0.2149;
 
 
 %  Symbols / Symbol Masks
-p.trial.task.features.symbol.colors = [16 18 19 20 21 22];
+%p.trial.task.features.symbol.colors = [16 18 19 20 21 22];
+%p.trial.task.features.symbol.color_names = {'B','O','Y','P','G','C','S'}
+%  Purple and yellow only:
+p.trial.task.features.symbol.color_names = {'Y','P'};
+p.trial.task.features.symbol.colors = [19 20];
 p.trial.task.features.symbol.background = 23;
 p.trial.task.features.symbol.outer_diameter = 200;
 p.trial.task.features.symbol.inner_diameter = p.trial.task.features.symbol.outer_diameter/sqrt(2);
@@ -191,70 +194,106 @@ feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
 %  CONDITIONS MATRIX
 %
 
-%  The trials are organized into blocks.  There are nblocks and
-%  2*nlum*nreps trials per block.  Within a block the trials will be
-%  shuffled.  There are ninstructors for release at log10C = -0.5 and
-%  ninstructors for press at log10C = -Inf at the start of each block.
-
-%  Set up conditions matrix
-log10C = p.trial.task.features.log10C;
-bgColor =  p.trial.display.bgColor(1);
-
-nreps = p.trial.task.features.nreps;
+%  Subject specific parameters
 ntotal = p.trial.task.features.ntotal;
+maskratio = p.trial.task.features.maskratio;
+log10C = p.trial.task.features.log10C;
 
+%  Luminances
+bgColor =  p.trial.display.bgColor(1);
 lum = bgColor(1) - (1-bgColor(1))*power(10,log10C);
 nlum = length(lum);
-nshufflegroups = 1;
 
-p.trial.task.constants.TrialsPerBlock = 2*nlum*nreps;
+%  Generate the sequences (only two colors for now)
+[set,notset] = sequence.generator(p.trial.task.features.symbol.color_names);
 
+%  The number of repetitions will be the number of sequences in the notset
+%  category; that way, there is an example of each notset for each signal
+%  strength.
+nset = size(set,1);
+nnotset = size(notset,1);
+
+%  Organize trials into blocks.  There are, at a minimum, nlum*nnotset trials
+%  from the notset category and nlum*nnotset trials from the set category in
+%  the block.  Based on the maskratio there will be
+%  2*nlum*nnotset*maskratio mask trials per block (nlum*nnotset*maskratio
+%  release trials and nlum*nnotset*maskratio press trials).  Total number
+%  of trials is then 2*nlum*nnotset + 2*nlum*nnotset*maskratio or
+%  2*nlum*nnotset*(1+maskratio)
+
+if(maskratio >= 1)
+    NumSetTrials = 2*nlum*nnotset;
+    NumMaskTrials = maskratio*nlum*nnotset; %  The number of release or press trials
+else
+    NumSetTrials = 2*nlum*nnotset/maskratio;
+    NumMaskTrials = nlum*nnotset;
+end
+
+p.trial.task.constants.TrialsPerBlock = 2*(NumSetTrials+NumMaskTrials);
 nblocks = floor(ntotal/p.trial.task.constants.TrialsPerBlock);
-
 p.trial.task.constants.maxBlocks = nblocks;
-
 p.trial.task.constants.maxTrials = p.trial.task.constants.maxBlocks*p.trial.task.constants.TrialsPerBlock;
 
+%  Trial specifiers to be shuffled:
 %  Column order:
 %  1--luminance
 %  2--log10C
 %  3--luminance index into matrix for performance display purposes
 %  4--choice (1==press, 0==release)
-%  5--within block trial number
-%  6--block number
-%  7--shuffle group (all trials within a block of a given shuffle group can
-%  be shuffled together, but not with trials of a different shuffle group).
+%  5--trial class (0==mask, 1==set, 2==notset)
+%  6--index into sequence identifier
 
-A = zeros(p.trial.task.constants.TrialsPerBlock,7);
+A = zeros(p.trial.task.constants.TrialsPerBlock,6);
+
+%  Mask trials
 
 %  Press trials
-A(1:nlum*nreps,1) = bgColor;
-A(1:nlum*nreps,2) = -Inf;
-A(1:nlum*nreps,3) = nlum+1;
-A(1:nlum*nreps,4) = 1;
+A(1:NumMaskTrials,1) = bgColor;
+A(1:NumMaskTrials,2) = -Inf;
+A(1:NumMaskTrials,3) = nlum+1;
+A(1:NumMaskTrials,4) = 1;
 
 %  Release trials
-A(nlum*nreps+1:2*nlum*nreps,1) = repmat(lum(:),nreps,1);
-A(nlum*nreps+1:2*nlum*nreps,2) = repmat(log10C(:),nreps,1);
-A(nlum*nreps+1:2*nlum*nreps,3) = repmat((1:nlum)',nreps,1);
-A(nlum*nreps+1:2*nlum*nreps,4) = 0;
+A(1+NumMaskTrials:2*NumMaskTrials,1) = repmat(lum(:),NumMaskTrials/nlum,1);
+A(1+NumMaskTrials:2*NumMaskTrials,2) = repmat(log10C(:),NumMaskTrials/nlum,1);
+A(1+NumMaskTrials:2*NumMaskTrials,3) = repmat((1:nlum)',NumMaskTrials/nlum,1);
 
-A(1:2*nlum*nreps,5) = (1:2*nlum*nreps)';
+%  notset trials (press)
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,1) = bgColor;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,2) = -Inf;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,3) = 1;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,4) = 1;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,5) = 2;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,6) = repmat((1:nnotset)',NumSetTrials/nnotset,1);
 
-A(1:2*nlum*nreps,7) = 1;
+%  Set trials (release)
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),1) = repmat(lum(:),NumSetTrials/nlum,1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),2) = repmat(log10C(:),NumSetTrials/nlum,1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),3) = repmat((1:nlum)',NumSetTrials/nlum,1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),4) = 0;
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),5) = 1;
+sequence_index = repmat(1:nset,nlum,1);
+sequence_index = sequence_index(:);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),6) = repmat(sequence_index,NumSetTrials/(nset*nlum),1);
 
 A = repmat(A,nblocks,1);
 
-blocknum = repmat(1:nblocks,2*nlum*nreps,1);
-A(:,6) = blocknum(:);
+%  Trial specifiers not to be shuffled:
+%  1--within block trial number
+%  2--block number
+
+B = zeros(p.trial.task.constants.TrialsPerBlock,2);
+
+B(1:2*(NumMaskTrials+NumSetTrials),1) = (1:2*(NumMaskTrials+NumSetTrials))';
+B = repmat(B,nblocks,1);
+blocknum = repmat(1:nblocks,2*(NumMaskTrials+NumSetTrials),1);
+B(:,2) = blocknum(:);
 
 %  Now go through and shuffle the trials within the blocks.
 
 for i=1:nblocks
-    for j=1:nshufflegroups
-        indx = A(:,6)==i & A(:,7)==j;
-        A(indx,1:4) = Shuffle(A(indx,1:4),2);
-    end
+    indx = B(:,2)==i;
+    A(indx,:) = Shuffle(A(indx,:),2);
 end
 
 %  Features of the trials
@@ -263,8 +302,9 @@ end
 %  log10C -- for display
 %  lum_indx -- for record keeping
 %  trial_type -- press or release
-%  symbol_type -- mask versus the symbol code
-%  repeat_priority -- allows selective repeats of trials
+%  sequence_type -- mask versus the sequence type
+%  symbol_code -- array of strings describing symbols
+%  symbol_features -- array of structures describing symbols
 
 ntrials = size(A,1);
 c = cell(1,ntrials);
@@ -277,10 +317,26 @@ for i=1:ntrials
     else
         c{i}.trial_type = 'release';
     end
-    c{i}.symbol_type = 'mask';
-    c{i}.trial_number = A(i,5);
-    c{i}.block_number = A(i,6);
-    c{i}.repeat_priority = A(i,7);
+    if(A(i,5)==0)
+        c{i}.sequence_type = 'mask';
+    elseif(A(i,5)==1)
+        c{i}.sequence_type = 'set';
+        c{i}.sequence_code = strcat(set{A(i,6),1},'.',set{A(i,6),2},'.',set{A(i,6),3});
+        for j=1:3
+            c{i}.symbol_features(j).color = p.trial.task.features.symbol.colors(strcmp(set{A(i,6),j},p.trial.task.features.symbol.color_names));
+            c{i}.symbol_features(j).name = set{A(i,6),j};
+        end
+    else
+        c{i}.sequence_type = 'notset';
+        c{i}.sequence_code = strcat(notset{A(i,6),1},'.',notset{A(i,6),2},'.',notset{A(i,6),3});
+        for j=1:3
+            c{i}.symbol_features(j).color = p.trial.task.features.symbol.colors(strcmp(notset{A(i,6),j},p.trial.task.features.symbol.color_names));
+            c{i}.symbol_features(j).name = notset{A(i,6),j};
+        end
+    end
+    
+    c{i}.trial_number = B(i,1);
+    c{i}.block_number = B(i,2);
 end
 p.conditions = c;
 
