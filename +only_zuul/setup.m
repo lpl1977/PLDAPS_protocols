@@ -1,11 +1,11 @@
-function p = setup_v04(p)
+function p = setup(p)
 %  PLDAPS SETUP FILE
 %  PACKAGE:  only_zuul
 %  TRIAL FUNCTION:  trial_function
 
 %
-%  This version of the setup file has SET and notset trials in addition to
-%  mask trials.
+%  This version of the setup file has SET and NOTSET trials in addition to
+%  MASK trials.
 %
 
 %  Set trial master function
@@ -56,10 +56,6 @@ p.trial.display.clut.bGray = 23*[1 1 1]';
 
 p.trial.display.clut.bRed = 24*[1 1 1]';
 
-p.trial.sound.useForReward = 0;
-p.trial.control_flags.use_eyepos = false;
-
-
 %
 %  JOYSTICK
 %
@@ -68,8 +64,8 @@ p.trial.control_flags.use_eyepos = false;
 switch p.trial.session.subject
     case 'Meatball'
         p.trial.joystick.default.beta = getfield(load('/home/astaroth/Documents/MATLAB/settings/JoystickSettings_Meatball.mat','beta'),'beta');        
-    otherwise
-        p.trial.joystick.default.beta = getfield(load('/home/astaroth/Documents/MATLAB/settings/JoystickSettings.mat','beta'),'beta');
+    case 'Murray'
+        p.trial.joystick.default.beta = getfield(load('/home/astaroth/Documents/MATLAB/settings/JoystickSettings_Murray.mat','beta'),'beta');
 end
 
 %  Thresholds between zones
@@ -88,92 +84,94 @@ p.trial.joystick.engage = p.trial.joystick.joystick_warning;
 %  TIMING
 %
 
-p.trial.task.timing.engage.start_time = NaN;
-p.trial.task.timing.engage.cue_start_time = NaN;
-p.trial.task.timing.engage.cue_display_time = 0.25;
-p.trial.task.timing.engage.cue_extinguish_time = 0.25;
+p.trial.specs.timing.engage.start_time = NaN;
+p.trial.specs.timing.engage.cue_start_time = NaN;
+p.trial.specs.timing.engage.cue_display_time = 0.25;
+p.trial.specs.timing.engage.cue_extinguish_time = 0.25;
 
-p.trial.task.timing.delay.start_time = NaN;
+p.trial.specs.timing.delay.start_time = NaN;
 
-p.trial.task.timing.symbol.start_time = NaN;
+p.trial.specs.timing.symbol.start_time = NaN;
 
-p.trial.task.timing.joystick_warning.start_time = NaN;
-p.trial.task.timing.joystick_warning.duration = 10;
+p.trial.specs.timing.joystick_warning.start_time = NaN;
+p.trial.specs.timing.joystick_warning.duration = 10;
 
-p.trial.task.timing.eye_warning.start_time = NaN;
-p.trial.task.timing.eye_warning.duration = 10;
-p.trial.task.timing.eye_warning.cue_start_time = NaN;
-p.trial.task.timing.eye_warning.cue_display_time = 0.25;
-p.trial.task.timing.eye_warning.cue_extinguish_time = 0.25;
+p.trial.specs.timing.eye_warning.start_time = NaN;
+p.trial.specs.timing.eye_warning.duration = 10;
+p.trial.specs.timing.eye_warning.cue_start_time = NaN;
+p.trial.specs.timing.eye_warning.cue_display_time = 0.25;
+p.trial.specs.timing.eye_warning.cue_extinguish_time = 0.25;
 
-p.trial.task.timing.reward.start_time = NaN;
+p.trial.specs.timing.reward.start_time = NaN;
 
-p.trial.task.timing.response_cue.start_time = NaN;
-p.trial.task.timing.response_cue.start_frame = NaN;
-p.trial.task.timing.response_cue.grace = 20;
-p.trial.task.timing.response_cue.buffer_entry_time = NaN;
-p.trial.task.timing.response_cue.buffer_maximum_time = 10/120;
+p.trial.specs.timing.response_cue.start_time = NaN;
+p.trial.specs.timing.response_cue.start_frame = NaN;
+p.trial.specs.timing.response_cue.grace = 20;
+p.trial.specs.timing.response_cue.buffer_entry_time = NaN;
+p.trial.specs.timing.response_cue.buffer_maximum_time = 10/120;
 
-p.trial.task.timing.timeout.start_time = NaN;
-p.trial.task.timing.timeout.duration = 2;
+p.trial.specs.timing.timeout.start_time = NaN;
+p.trial.specs.timing.timeout.duration = 2;
 
-p.trial.task.timing.error_penalty.start_time = NaN;
-p.trial.task.timing.error_penalty.duration = 0.5;
+p.trial.specs.timing.error_penalty.start_time = NaN;
+p.trial.specs.timing.error_penalty.duration = 0.5;
 
-p.trial.task.timing.reward_delay.start_time = NaN;
-p.trial.task.timing.reward_delay.eligible_start_time = NaN;
+p.trial.specs.timing.reward_delay.start_time = NaN;
+p.trial.specs.timing.reward_delay.eligible_start_time = NaN;
 
-p.trial.task.timing.error_delay.start_time = NaN;
-p.trial.task.timing.error_delay.eligible_start_time = NaN;
+p.trial.specs.timing.error_delay.start_time = NaN;
+p.trial.specs.timing.error_delay.eligible_start_time = NaN;
 
-p.trial.task.timing.buffer.start_time = NaN;
-p.trial.task.timing.buffer.maximum_time = 10/120;
+p.trial.specs.timing.buffer.start_time = NaN;
+p.trial.specs.timing.buffer.maximum_time = 10/120;
 
 %
 %  FEATURES
 %
 
 %  Fixation cue
-p.trial.task.features.fixation.width = 12;
-p.trial.task.features.fixation.linewidth = 3;
-p.trial.task.features.fixation.color = p.trial.display.clut.bWhite;
+p.trial.specs.features.fixation.width = 12;
+p.trial.specs.features.fixation.linewidth = 3;
+p.trial.specs.features.fixation.color = p.trial.display.clut.bWhite;
 
 %  Engage
-p.trial.task.features.engage = p.trial.task.features.fixation;
-p.trial.task.features.engage.color = p.trial.display.clut.bYellow;
+p.trial.specs.features.engage = p.trial.specs.features.fixation;
+p.trial.specs.features.engage.color = p.trial.display.clut.bYellow;
 
 %  Warning cue
-p.trial.task.features.warning = p.trial.task.features.fixation;
-p.trial.task.features.joystick_warning.color = p.trial.display.clut.bRed;
+p.trial.specs.features.warning = p.trial.specs.features.fixation;
+p.trial.specs.features.joystick_warning.color = p.trial.display.clut.bRed;
 
 %  Response cue
-p.trial.task.features.response_cue.diameter = 100;
-p.trial.task.features.response_cue.linewidth = 10;
+p.trial.specs.features.response_cue.diameter = 100;
+p.trial.specs.features.response_cue.linewidth = 10;
 
 %  Noise annulus
-p.trial.task.features.annulus.outer_diameter = 150;
-p.trial.task.features.annulus.inner_diameter = 60;
-p.trial.task.features.annulus.noise_sigma = 0.2149;
+p.trial.specs.features.annulus.outer_diameter = 150;
+p.trial.specs.features.annulus.inner_diameter = 60;
+p.trial.specs.features.annulus.noise_sigma = 0.2149;
 
 
 %  Symbols / Symbol Masks
-%p.trial.task.features.symbol.colors = [16 18 19 20 21 22];
-%p.trial.task.features.symbol.color_names = {'B','O','Y','P','G','C','S'}
+%p.trial.specs.features.symbol.colors = [16 18 19 20 21 22];
+%p.trial.specs.features.symbol.color_names = {'B','O','Y','P','G','C','S'}
 %  Purple and yellow only:
-p.trial.task.features.symbol.color_names = {'Y','P'};
-p.trial.task.features.symbol.colors = [19 20];
-p.trial.task.features.symbol.background = 23;
-p.trial.task.features.symbol.outer_diameter = 200;
-p.trial.task.features.symbol.inner_diameter = p.trial.task.features.symbol.outer_diameter/sqrt(2);
-p.trial.task.features.symbol.radius = 200;
+p.trial.specs.features.symbol.color_names = {'P','G'};
+p.trial.specs.features.symbol.colors = [19 20];
+p.trial.specs.features.symbol.background = 23;
+p.trial.specs.features.symbol.outer_diameter = 225;
+p.trial.specs.features.symbol.inner_diameter = p.trial.specs.features.symbol.outer_diameter/sqrt(2);
+p.trial.specs.features.symbol.radius = 200;
 
-diameter = p.trial.task.features.symbol.outer_diameter;
+diameter = p.trial.specs.features.symbol.outer_diameter;
 baseRect = [0 0 diameter diameter];
 centeredRect = CenterRectOnPointd(baseRect, p.trial.display.ctr(1), p.trial.display.ctr(2));
-radius = p.trial.task.features.symbol.radius;
+radius = p.trial.specs.features.symbol.radius;
 dx = radius*cos(pi/6);
 dy = radius*sin(pi/6);
-p.trial.task.features.symbol.positions = [centeredRect + [-dx -dy -dx -dy]; centeredRect + [dx -dy dx -dy]; centeredRect + [0 radius 0 radius]];
+p.trial.specs.features.symbol.positions = [centeredRect + [-dx -dy -dx -dy]; centeredRect + [dx -dy dx -dy]; centeredRect + [0 radius 0 radius] ; centeredRect + [-dx dy -dx dy]; centeredRect + [0 -radius 0 -radius]; centeredRect + [dx dy dx dy]];
+ctr = [p.trial.display.ctr(1) p.trial.display.ctr(2)];
+p.trial.specs.features.symbol.centers = [ctr + [-dx -dy] ; ctr + [dx -dy] ; ctr + [0 radius] ; ctr + [-dx dy] ; ctr + [0 -radius] ; ctr + [dx dy]];
 
 %  Trial duration information
 p.trial.pldaps.maxTrialLength = 5*60;
@@ -182,10 +180,10 @@ p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
 %
 %  Constants
 %
-p.trial.task.constants.minTrialTime = 60;
-p.trial.task.constants.TrialsPerBlock = [];
-p.trial.task.constants.maxBlocks = [];
-p.trial.task.constants.maxTrials = [];
+p.trial.specs.constants.minTrialTime = 60;
+p.trial.specs.constants.TrialsPerBlock = [];
+p.trial.specs.constants.maxBlocks = [];
+p.trial.specs.constants.maxTrials = [];
 
 %  Subject specific timing parameters / actions
 feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
@@ -195,9 +193,9 @@ feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
 %
 
 %  Subject specific parameters
-ntotal = p.trial.task.features.ntotal;
-maskratio = p.trial.task.features.maskratio;
-log10C = p.trial.task.features.log10C;
+ntotal = p.trial.specs.features.ntotal;
+maskratio = p.trial.specs.features.maskratio;
+log10C = p.trial.specs.features.log10C;
 
 %  Luminances
 bgColor =  p.trial.display.bgColor(1);
@@ -205,7 +203,7 @@ lum = bgColor(1) - (1-bgColor(1))*power(10,log10C);
 nlum = length(lum);
 
 %  Generate the sequences (only two colors for now)
-[set,notset] = sequence.generator(p.trial.task.features.symbol.color_names);
+[set,notset] = sequence.generator(p.trial.specs.features.symbol.color_names);
 
 %  The number of repetitions will be the number of sequences in the notset
 %  category; that way, there is an example of each notset for each signal
@@ -229,10 +227,10 @@ else
     NumMaskTrials = nlum*nnotset;
 end
 
-p.trial.task.constants.TrialsPerBlock = 2*(NumSetTrials+NumMaskTrials);
-nblocks = floor(ntotal/p.trial.task.constants.TrialsPerBlock);
-p.trial.task.constants.maxBlocks = nblocks;
-p.trial.task.constants.maxTrials = p.trial.task.constants.maxBlocks*p.trial.task.constants.TrialsPerBlock;
+p.trial.specs.constants.TrialsPerBlock = 2*(NumSetTrials+NumMaskTrials);
+nblocks = floor(ntotal/p.trial.specs.constants.TrialsPerBlock);
+p.trial.specs.constants.maxBlocks = nblocks;
+p.trial.specs.constants.maxTrials = p.trial.specs.constants.maxBlocks*p.trial.specs.constants.TrialsPerBlock;
 
 %  Trial specifiers to be shuffled:
 %  Column order:
@@ -243,7 +241,7 @@ p.trial.task.constants.maxTrials = p.trial.task.constants.maxBlocks*p.trial.task
 %  5--trial class (0==mask, 1==set, 2==notset)
 %  6--index into sequence identifier
 
-A = zeros(p.trial.task.constants.TrialsPerBlock,6);
+A = zeros(p.trial.specs.constants.TrialsPerBlock,6);
 
 %  Mask trials
 
@@ -282,7 +280,7 @@ A = repmat(A,nblocks,1);
 %  1--within block trial number
 %  2--block number
 
-B = zeros(p.trial.task.constants.TrialsPerBlock,2);
+B = zeros(p.trial.specs.constants.TrialsPerBlock,2);
 
 B(1:2*(NumMaskTrials+NumSetTrials),1) = (1:2*(NumMaskTrials+NumSetTrials))';
 B = repmat(B,nblocks,1);
@@ -323,14 +321,14 @@ for i=1:ntrials
         c{i}.sequence_type = 'set';
         c{i}.sequence_code = strcat(set{A(i,6),1},'.',set{A(i,6),2},'.',set{A(i,6),3});
         for j=1:3
-            c{i}.symbol_features(j).color = p.trial.task.features.symbol.colors(strcmp(set{A(i,6),j},p.trial.task.features.symbol.color_names));
+            c{i}.symbol_features(j).color = p.trial.specs.features.symbol.colors(strcmp(set{A(i,6),j},p.trial.specs.features.symbol.color_names));
             c{i}.symbol_features(j).name = set{A(i,6),j};
         end
     else
         c{i}.sequence_type = 'notset';
         c{i}.sequence_code = strcat(notset{A(i,6),1},'.',notset{A(i,6),2},'.',notset{A(i,6),3});
         for j=1:3
-            c{i}.symbol_features(j).color = p.trial.task.features.symbol.colors(strcmp(notset{A(i,6),j},p.trial.task.features.symbol.color_names));
+            c{i}.symbol_features(j).color = p.trial.specs.features.symbol.colors(strcmp(notset{A(i,6),j},p.trial.specs.features.symbol.color_names));
             c{i}.symbol_features(j).name = notset{A(i,6),j};
         end
     end

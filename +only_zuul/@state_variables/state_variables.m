@@ -3,7 +3,6 @@ classdef state_variables
     %   All the state variables for controlling a trial
     
     properties        
-        noise_frame = 0;
         trial_state = 'start';
         release_trial 
         press_trial 
@@ -27,7 +26,7 @@ classdef state_variables
     end
     
     methods 
-        %  Class constructor
+        %  Class constructor method
         function obj = state_variables(condition)
             obj.release_trial = strcmp('release',condition.trial_type);
             obj.press_trial = ~obj.release_trial;
