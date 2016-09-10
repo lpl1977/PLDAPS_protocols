@@ -22,18 +22,17 @@ classdef state_variables
         
         set_trial
         notset_trial
-        mask_trial
+        mask_trial = false;
     end
     
     methods 
         %  Class constructor method
         function obj = state_variables(condition)
-            obj.release_trial = strcmp('release',condition.trial_type);
+            obj.release_trial = strcmp('set',condition.sequence_type);
             obj.press_trial = ~obj.release_trial;
             
             obj.set_trial = strcmp('set',condition.sequence_type);
             obj.notset_trial = strcmp('notset',condition.sequence_type);
-            obj.mask_trial = strcmp('mask',condition.sequence_type);
         end
     end
     

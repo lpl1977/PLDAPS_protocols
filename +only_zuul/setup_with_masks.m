@@ -4,8 +4,8 @@ function p = setup(p)
 %  TRIAL FUNCTION:  trial_function
 
 %
-%  This version of the setup file has SET and NOTSET trials with symbols
-%  that vary based on color, shape, and fill
+%  This version of the setup file has SET and NOTSET trials in addition to
+%  MASK trials.
 %
 
 %  Set trial master function
@@ -143,8 +143,8 @@ p.trial.specs.features.warning = p.trial.specs.features.fixation;
 p.trial.specs.features.joystick_warning.color = p.trial.display.clut.bRed;
 
 %  Response cue
-p.trial.specs.features.response_cue.outer_diameter = 120;
-p.trial.specs.features.response_cue.inner_diameter = 90;
+p.trial.specs.features.response_cue.outer_diameter = 105;
+p.trial.specs.features.response_cue.inner_diameter = 95;
 
 %  Noise annulus
 p.trial.specs.features.annulus.outer_diameter = 150;
@@ -153,13 +153,13 @@ p.trial.specs.features.annulus.noise_sigma = 0.2149;
 
 
 %  Symbols / Symbol Masks
-p.trial.specs.features.symbol.color_indx = [16 17 18 19 20 21 22];
+p.trial.specs.features.symbol.color_indx = [16 18 19 20 21 22];
 p.trial.specs.features.symbol.color_names = {'B','O','Y','P','G','C','S'};
 
 p.trial.specs.features.symbol.background = 23;
 p.trial.specs.features.symbol.outer_diameter = 225;
 p.trial.specs.features.symbol.inner_diameter = p.trial.specs.features.symbol.outer_diameter/sqrt(2);
-p.trial.specs.features.symbol.radius = 220;
+p.trial.specs.features.symbol.radius = 200;
 
 p.trial.specs.features.symbol.colors = {'P','G'};
 p.trial.specs.features.symbol.shapes = {'C','S'};
@@ -194,7 +194,9 @@ feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
 %  CONDITIONS MATRIX
 %
 
+%  Subject specific parameters
 ntotal = p.trial.specs.features.ntotal;
+maskratio = p.trial.specs.features.maskratio;
 log10C = p.trial.specs.features.log10C;
 
 %  Luminances
@@ -202,36 +204,32 @@ bgColor =  p.trial.display.bgColor(1);
 lum = bgColor(1) - (1-bgColor(1))*power(10,log10C);
 nlum = length(lum);
 
-%  Generate the sets
-S = only_zuul.sequence.generator(p.trial.specs.features.symbol.colors,p.trial.specs.features.symbol.shapes,p.trial.specs.features.symbol.fills);
+%  Generate the sequences (only two colors for now)
+[set,notset] = sequence.generator(p.trial.specs.features.symbol.colors,p.trial.specs.features.symbol.shapes,p.trial.specs.features.symbol.fills);
 
-%  For now, sets will be sequences which share the same color and not shape
-%  or shading.
-setrulecodes = only_zuul.sequence.combvec({4,[0 1 2 3],[0 1 2 3]});
-nsetrules = size(setrulecodes,2);
-setrules = cell(nsetrules,1);
-for i=1:nsetrules
-    setrules{i} = sprintf('%d%d%d',setrulecodes(:,i));
+%  The number of repetitions will be the number of sequences in the notset
+%  category; that way, there is an example of each notset for each signal
+%  strength.
+nset = size(set,1);
+nnotset = size(notset,1);
+
+%  Organize trials into blocks.  There are, at a minimum, nlum*nnotset trials
+%  from the notset category and nlum*nnotset trials from the set category in
+%  the block.  Based on the maskratio there will be
+%  2*nlum*nnotset*maskratio mask trials per block (nlum*nnotset*maskratio
+%  release trials and nlum*nnotset*maskratio press trials).  Total number
+%  of trials is then 2*nlum*nnotset + 2*nlum*nnotset*maskratio or
+%  2*nlum*nnotset*(1+maskratio)
+
+if(maskratio >= 1)
+    NumSetTrials = 2*nlum*nnotset;
+    NumMaskTrials = maskratio*nlum*nnotset; %  The number of release or press trials
+else
+    NumSetTrials = 2*nlum*nnotset/maskratio;
+    NumMaskTrials = nlum*nnotset;
 end
-sets = only_zuul.sequence.selector(S,setrules);
-p.trial.specs.features.sets = sets;
 
-%  For now, notsets will be sequences in which symbols share at most two
-%  features with one other symbol but not three.
-notsetrulecodes = only_zuul.sequence.combvec({[0 1 2 3],[0 1 2 3],[0 1 2 3]});
-nnotsetrules = size(notsetrulecodes,2);
-notsetrules = cell(nnotsetrules,1);
-for i=1:nnotsetrules
-    notsetrules{i} = sprintf('%d%d%d',notsetrulecodes(:,i));
-end
-notsets = only_zuul.sequence.selector(S,notsetrules);
-p.trial.specs.features.notsets = notsets;
-
-nsets = size(sets,1);
-nnotsets = size(notsets,1);
-
-%  Set up trial and block counts
-p.trial.specs.constants.TrialsPerBlock = 2*nlum*lcm(nsets,nnotsets);
+p.trial.specs.constants.TrialsPerBlock = 2*(NumSetTrials+NumMaskTrials);
 nblocks = floor(ntotal/p.trial.specs.constants.TrialsPerBlock);
 p.trial.specs.constants.maxBlocks = nblocks;
 p.trial.specs.constants.maxTrials = p.trial.specs.constants.maxBlocks*p.trial.specs.constants.TrialsPerBlock;
@@ -240,24 +238,43 @@ p.trial.specs.constants.maxTrials = p.trial.specs.constants.maxBlocks*p.trial.sp
 %  Column order:
 %  1--luminance
 %  2--log10C
-%  3--trial class (1==set/release, 2==notset/press)
-%  4--index into sequence identifier
+%  3--luminance index into matrix for performance display purposes
+%  4--choice (1==press, 0==release)
+%  5--trial class (0==mask, 1==set, 2==notset)
+%  6--index into sequence identifier
 
-A = zeros(p.trial.specs.constants.TrialsPerBlock,4);
+A = zeros(p.trial.specs.constants.TrialsPerBlock,6);
 
-%  Notset trials (press)
-A(1:nlum*lcm(nsets,nnotsets),1) = bgColor;
-A(1:nlum*lcm(nsets,nnotsets),2) = -Inf;
-A(1:nlum*lcm(nsets,nnotsets),3) = 2;
-A(1:nlum*lcm(nsets,nnotsets),4) = repmat((1:nnotsets)',nlum*lcm(nsets,nnotsets)/nnotsets,1);
+%  Mask trials
+
+%  Press trials
+A(1:NumMaskTrials,1) = bgColor;
+A(1:NumMaskTrials,2) = -Inf;
+A(1:NumMaskTrials,3) = nlum+1;
+A(1:NumMaskTrials,4) = 1;
+
+%  Release trials
+A(1+NumMaskTrials:2*NumMaskTrials,1) = repmat(lum(:),NumMaskTrials/nlum,1);
+A(1+NumMaskTrials:2*NumMaskTrials,2) = repmat(log10C(:),NumMaskTrials/nlum,1);
+A(1+NumMaskTrials:2*NumMaskTrials,3) = repmat((1:nlum)',NumMaskTrials/nlum,1);
+
+%  notset trials (press)
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,1) = bgColor;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,2) = -Inf;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,3) = 1;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,4) = 1;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,5) = 2;
+A(1+2*NumMaskTrials:2*NumMaskTrials+NumSetTrials,6) = repmat((1:nnotset)',NumSetTrials/nnotset,1);
 
 %  Set trials (release)
-A(1+nlum*lcm(nsets,nnotsets):2*nlum*lcm(nsets,nnotsets),1) = repmat(lum(:),lcm(nsets,nnotsets),1);
-A(1+nlum*lcm(nsets,nnotsets):2*nlum*lcm(nsets,nnotsets),2) = repmat(log10C(:),lcm(nsets,nnotsets),1);
-A(1+nlum*lcm(nsets,nnotsets):2*nlum*lcm(nsets,nnotsets),3) = 1;
-sequence_index = repmat(1:nsets,nlum,1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),1) = repmat(lum(:),NumSetTrials/nlum,1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),2) = repmat(log10C(:),NumSetTrials/nlum,1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),3) = repmat((1:nlum)',NumSetTrials/nlum,1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),4) = 0;
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),5) = 1;
+sequence_index = repmat(1:nset,nlum,1);
 sequence_index = sequence_index(:);
-A(1+nlum*lcm(nsets,nnotsets):2*nlum*lcm(nsets,nnotsets),4) = repmat(sequence_index,nlum*lcm(nsets,nnotsets)/(nsets*nlum),1);
+A(1+2*NumMaskTrials+NumSetTrials:2*(NumMaskTrials+NumSetTrials),6) = repmat(sequence_index,NumSetTrials/(nset*nlum),1);
 
 A = repmat(A,nblocks,1);
 
@@ -267,9 +284,9 @@ A = repmat(A,nblocks,1);
 
 B = zeros(p.trial.specs.constants.TrialsPerBlock,2);
 
-B(1:2*nlum*lcm(nsets,nnotsets),1) = (1:2*nlum*lcm(nsets,nnotsets))';
+B(1:2*(NumMaskTrials+NumSetTrials),1) = (1:2*(NumMaskTrials+NumSetTrials))';
 B = repmat(B,nblocks,1);
-blocknum = repmat(1:nblocks,2*nlum*lcm(nsets,nnotsets),1);
+blocknum = repmat(1:nblocks,2*(NumMaskTrials+NumSetTrials),1);
 B(:,2) = blocknum(:);
 
 %  Now go through and shuffle the trials within the blocks.
@@ -283,28 +300,46 @@ end
 %
 %  luminance -- for stimulus preparation
 %  log10C -- for display
-%  sequence_type -- set/release or notset/press
-%  symbol_codes -- array of strings describing symbols
+%  lum_indx -- for record keeping
+%  trial_type -- press or release
+%  sequence_type -- mask versus the sequence type
+%  symbol_code -- array of strings describing symbols
+%  symbol_features -- array of structures describing symbols
 
 ntrials = size(A,1);
 c = cell(1,ntrials);
 for i=1:ntrials
     c{i}.luminance = A(i,1);
     c{i}.log10C = A(i,2);
-    if(A(i,3)==1)
+    c{i}.lum_indx = A(i,3);
+    if(A(i,4))
+        c{i}.trial_type = 'press';
+    else
+        c{i}.trial_type = 'release';
+    end
+    if(A(i,5)==0)
+        c{i}.sequence_type = 'mask';
+    elseif(A(i,5)==1)
         c{i}.sequence_type = 'set';
-        c{i}.symbol_codes = {sets{A(i,4),1},sets{A(i,4),2},sets{A(i,4),3}};
+        c{i}.sequence_code = strcat(set{A(i,6),1},'.',set{A(i,6),2},'.',set{A(i,6),3});
+        for j=1:3
+%            c{i}.symbol_features(j).color = p.trial.specs.features.symbol.colors(strcmp(set{A(i,6),j},p.trial.specs.features.symbol.color_names));
+            c{i}.symbol_features(j) = set{A(i,6),j};
+        end
     else
         c{i}.sequence_type = 'notset';
-        c{i}.symbol_codes = {notsets{A(i,4),1},notsets{A(i,4),2},notsets{A(i,4),3}};
-    end    
+        c{i}.sequence_code = strcat(notset{A(i,6),1},'.',notset{A(i,6),2},'.',notset{A(i,6),3});
+        for j=1:3
+%            c{i}.symbol_features(j).color = p.trial.specs.features.symbol.colors(strcmp(notset{A(i,6),j},p.trial.specs.features.symbol.color_names));
+            c{i}.symbol_features(j) = notset{A(i,6),j};
+        end
+    end
+    
     c{i}.trial_number = B(i,1);
     c{i}.block_number = B(i,2);
 end
 p.conditions = c;
 
-%  Maximum number of trials -- set this to a number much bigger than ntrials
-p.trial.pldaps.finish = 10*ntrials;
+%  Maximum number of trials
+p.trial.pldaps.finish = Inf;
 
-%  Get ready to track performance
-p.functionHandles.performance = only_zuul.performance.performance(p.trial.specs.features.log10C);

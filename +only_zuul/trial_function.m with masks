@@ -50,17 +50,41 @@ switch state
         %  Initialize trial state variables
         p.trial.state_variables = only_zuul.state_variables(p.trial.condition);
         
-        %  Initialize symbol positions
-        p.trial.specs.features.symbol.positions = randperm(3)+3*(unidrnd(2)-1);
+%         %  Initialize performance
+%         if(p.trial.pldaps.iTrial==1)
+%             nlum = length(p.trial.specs.features.log10C);
+%             p.trial.specs.performance.total = only_zuul.performance(nlum+1);
+%             p.trial.specs.performance.mask = only_zuul.performance(nlum+1);
+%             p.trial.specs.performance.set = only_zuul.performance(nlum);
+%             p.trial.specs.performance.notset = only_zuul.performance(1);
+%         else
+%             p.trial.specs.performance = p.data{p.trial.pldaps.iTrial-1}.task.performance;
+%         end
         
+        %  Initialize random symbol position order
+        p.trial.specs.features.symbol.position_order = randperm(3)+3*(unidrnd(2)-1);
+        
+        %  Prepare for symbol masks (even if we don't use them, take same
+        %  time every trial).
+        p.trial.specs.features.symbol.rng_seed = rng;
+        diameter = p.trial.specs.features.symbol.outer_diameter;
+        colors = p.trial.specs.features.symbol.colors;
+        mix = ones(1,length(p.trial.specs.features.symbol.colors))/length(p.trial.specs.features.symbol.colors);
+        %p.trial.specs.features.symbol.masks = only_zuul.symbol_masks(diameter,colors,mix,p.trial.specs.features.symbol.rng_seed);
+        
+        only_zuul.symbol_masks.init(diameter,colors,mix,p.trial.specs.features.symbol.rng_seed);
+        
+        %  Setup for noise annulus
+%         p.trial.specs.features.annulus.rng_seed = rng;
+%         annulus_dimensions = [p.trial.specs.features.annulus.outer_diameter p.trial.specs.features.annulus.inner_diameter];
+%         response_cue_dimensions = [p.trial.specs.features.response_cue.diameter+2*p.trial.specs.features.response_cue.linewidth p.trial.specs.features.response_cue.diameter];
+%         only_zuul.noise_ring.init(annulus_dimensions,response_cue_dimensions,p.trial.specs.features.annulus.rng_seed);
+%         
         %  Print trial information to screen
         
-        fprintf('TRIAL ATTEMPT %d (%d total trials of %d completed, %d remain):\n',p.trial.pldaps.iTrial,p.trial.indexing.total_completed,p.trial.specs.constants.maxTrials,p.trial.specs.constants.maxTrials-p.trial.indexing.total_completed);
+        fprintf('START TRIAL ATTEMPT %d (%d total trials of %d completed, %d remain):\n',p.trial.pldaps.iTrial,p.trial.indexing.total_completed,p.trial.specs.constants.maxTrials,p.trial.specs.constants.maxTrials-p.trial.indexing.total_completed);
         fprintf('\tTrial %d of %d for block %d of %d.\n',p.trial.condition.trial_number,p.trial.specs.constants.TrialsPerBlock,p.trial.condition.block_number,p.trial.specs.constants.maxBlocks);
-        fprintf('\tThis is a %s trial with log contrast %0.3f.\n',upper(p.trial.condition.sequence_type),p.trial.condition.log10C);
-        fprintf('\tSymbol sequence:  %s %s %s\n',p.trial.condition.symbol_codes{:});
-        fprintf('\tPositions:  %d %d %d\n',p.trial.specs.features.symbol.positions);
-        fprintf('\n');
+        fprintf('\tThis is a %s %s trial with log contrast %0.3f.\n',upper(p.trial.condition.sequence_type),upper(p.trial.condition.trial_type),p.trial.condition.log10C);
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  Clean Up and Save, post trial management
@@ -70,10 +94,15 @@ switch state
         
         if(p.trial.pldaps.quit == 0)
             
+            %  Update performance
+            %         p.trial.specs.performance.total = only_zuul.performance.update(p.trial.specs.performance.total,p.trial.outcome,p.trial.condition);
+            %         p.trial.specs.performance.(p.trial.condition.sequence_type) = only_zuul.performance.update(p.trial.specs.performance.(p.trial.condition.sequence_type),p.trial.outcome,p.trial.condition);
             %
-            %  Update trial indexing; depending on training flags, shuffle
-            %  aborts and errors.
             %
+            %  Update trial indexing
+            %
+            
+            %  Depending on training flags, shuffle aborts and errors.
             
             if(p.trial.outcome.completed && (p.trial.outcome.correct || ~p.trial.training_flags.repeat_errors))
                 p.trial.indexing.next_trial = p.trial.indexing.current_trial+1;
@@ -102,8 +131,8 @@ switch state
             end
         else
             
-            %  Trial was interrupted by user (paused or quit)
-            p.trial.outcome = interrupted_trial;
+            %  Trial was interrupted by user (paused or quit)            
+            p.trial.outcome = interrupted_trial;            
         end
         
         %  Clean up state variables
@@ -111,12 +140,6 @@ switch state
         
         
         %  Display performance
-        p.functionHandles.performance.update(p.trial.condition,p.trial.outcome);
-        p.functionHandles.performance.display_performance;
-        
-        
-        
-        
         %       only_zuul.performance.print_summary_performance(p.trial.specs.performance); %,p.trial.specs.features.log10C);
         
         %  Display aborts
@@ -178,7 +201,7 @@ switch state
         %         %3d\n',release_drift_errors); fprintf('\tPress drift errors:
         %         %3d\n',press_drift_errors); fprintf('\tMisses:
         %         %3d\n',misses); fprintf('\n');
-        
+                
     case p.trial.pldaps.trialStates.frameDraw
         %  Final image has been calculated and will now be drawn
         
@@ -204,8 +227,8 @@ switch state
         %
         
         if(p.trial.ttime > p.trial.pldaps.maxTrialLength-p.trial.specs.constants.minTrialTime)
-            fprintf('\t%s did not initiate trial within %0.3f sec.\n',p.trial.session.subject,p.trial.pldaps.maxTrialLength-60);
-            p.trial.outcome = aborted_trial('failed to initiate');
+            fprintf('\t%s did not initiate trial within %0.3f sec.\n',p.trial.session.subject,p.trial.pldaps.maxTrialLength-60);            
+            p.trial.outcome = aborted_trial('failed to initiate');            
             fprintf('END TRIAL %d.\n\n',p.trial.pldaps.iTrial);
             p.trial.flagNextTrial = true;
         end
@@ -232,8 +255,6 @@ switch state
                 
                 %  If monkey has joystick released then go to engage state.
                 %  Otherwise go to joystick warning.
-                
-                fprintf('START state\n');
                 
                 if(~p.trial.state_variables.joystick_released)
                     %  Monkey does not have joystick released.
@@ -346,7 +367,7 @@ switch state
                 ShowFixationCue;
                 if(isnan(p.trial.specs.timing.delay.start_time))
                     p.trial.specs.timing.delay.start_time = GetSecs;
-                    fprintf('DELAY state for %0.3f sec.\n',p.trial.specs.timing.delay.duration);
+                    fprintf('DELAY state for %0.3f sec.\n',p.trial.specs.timing.delay.duration);                    
                 elseif(p.trial.specs.timing.delay.start_time > GetSecs - p.trial.specs.timing.delay.duration)
                     
                     %  We're still in the delay period.  As long as he
@@ -357,7 +378,7 @@ switch state
                     %  warning.
                     
                     if(~p.trial.state_variables.joystick_engaged)
-                        %  Monkey released or pressed joystick early.
+                        %  Monkey released or pressed joystick early.                        
                         if(p.trial.state_variables.joystick_released || p.trial.state_variables.joystick_release_buffer)
                             fprintf('\t%s released joystick at %0.3f sec; go to engage.\n',...'delay'
                                 p.trial.session.subject,GetSecs-p.trial.specs.timing.delay.start_time);
@@ -374,10 +395,10 @@ switch state
                             p.trial.session.subject,GetSecs-p.trial.specs.timing.delay.start_time);
                         p.trial.specs.timing.delay.start_time = NaN;
                         p.trial.state_variables.trial_state = 'eye_warning';
-                    end
+                    end                    
                 else
                     %  Monkey has successfully held the joystick engaged
-                    %  and fixated to the end of the duration.
+                    %  and fixated to the end of the duration.                    
                     fprintf('\t%s successfully held joystick engaged and remained fixating.\n',p.trial.session.subject);
                     p.trial.state_variables.trial_state = 'symbol';
                     p.trial.specs.timing.delay.start_time = NaN;
@@ -456,11 +477,11 @@ switch state
                     %  Stop the joystick warning tone
                     pds.audio.stop(p,'joystick_warning');
                     
-                    fprintf('\t%s elapsed his joystick warning interval.\nEND TRIAL %d.\n\n',p.trial.session.subject,p.trial.pldaps.iTrial);
-                    
+                    fprintf('\t%s elapsed his joystick warning interval.\nEND TRIAL %d.\n\n',p.trial.session.subject,p.trial.pldaps.iTrial);                    
+
                     p.trial.outcome = aborted_trial('joystick warning elapsed');
-                    p.trial.specs.timing.joystick_warning.start_time = NaN;
-                    p.trial.flagNextTrial = true;
+                    p.trial.specs.timing.joystick_warning.start_time = NaN;                    
+                    p.trial.flagNextTrial = true;                    
                 end
                 
             case 'eye_warning'
@@ -487,7 +508,7 @@ switch state
                     pds.audio.play(p,'eye_warning',Inf);
                     
                     %  Show fixation cue
-                    ShowFixationCue;
+                    ShowFixationCue;                    
                 elseif(p.trial.specs.timing.eye_warning.start_time <= GetSecs - p.trial.specs.timing.eye_warning.duration)
                     
                     %  Monkey has failed to fixate during the warning
@@ -498,10 +519,10 @@ switch state
                     
                     fprintf('\t%s elapsed his eye warning interval.\nEND TRIAL %d.\n\n',p.trial.session.subject,p.trial.pldaps.iTrial);
                     
-                    p.trial.outcome = aborted_trial('eye warning elapsed');
+                    p.trial.outcome = aborted_trial('eye warning elapsed');                    
                     p.trial.specs.timing.eye_warning.start_time = NaN;
-                    p.trial.specs.timing.eye_warning.cue_start_time = GetSecs;
-                    p.trial.flagNextTrial = true;
+                    p.trial.specs.timing.eye_warning.cue_start_time = GetSecs;                    
+                    p.trial.flagNextTrial = true;                    
                 else
                     
                     %  We are still in the eye warning state.  We will
@@ -592,7 +613,7 @@ switch state
                         fprintf('SYMBOL MASK, %d of 3 for %0.3f sec.\n',p.trial.state_variables.current_symbol,p.trial.specs.timing.symbol.display_time);
                         ShowSymbolsMask;
                     else
-                        fprintf('SYMBOL %s, %d of 3 for %0.3f sec.\n',p.trial.condition.symbol_codes{p.trial.state_variables.current_symbol},p.trial.state_variables.current_symbol,p.trial.specs.timing.symbol.display_time);
+                        fprintf('SYMBOL %s, %d of 3 for %0.3f sec.\n',p.trial.condition.symbol_features(p.trial.state_variables.current_symbol).name,p.trial.state_variables.current_symbol,p.trial.specs.timing.symbol.display_time);
                         ShowSymbols;
                     end
                     
@@ -615,7 +636,7 @@ switch state
                     
                     fprintf('\t%s broke fixation after %0.3f sec; give him a timeout.\n',...
                         p.trial.session.subject,GetSecs-p.trial.specs.timing.delay.start_time);
-                    p.trial.outcome = aborted_trial('fixation break');
+                    p.trial.outcome = aborted_trial('fixation break');   
                     p.trial.specs.timing.symbol.start_time = NaN;
                     p.trial.state_variables.trial_state = 'timeout';
                 elseif(p.trial.specs.timing.symbol.start_time <= GetSecs - (p.trial.specs.timing.symbol.display_time + p.trial.specs.timing.symbol.interval))
@@ -784,7 +805,7 @@ switch state
                             else
                                 p.trial.specs.timing.response_cue.buffer_dwell_time = 0;
                                 fprintf('(<0.0083 sec in buffer).\n');
-                            end
+                            end                            
                             p.trial.specs.timing.response_cue.response_duration = GetSecs - p.trial.specs.timing.response_cue.reaction_time - p.trial.specs.timing.response_cue.start_time;
                             
                             if(p.trial.state_variables.press_trial)
@@ -795,7 +816,7 @@ switch state
                             
                             p.trial.specs.timing.response_cue.start_time = NaN;
                             p.trial.state_variables.wait_for_release = p.trial.training_flags.release_for_reward;
-                            
+                        
                         elseif(p.trial.state_variables.joystick_press_buffer)
                             
                             %  Joystick is now in the press buffer.
@@ -807,18 +828,18 @@ switch state
                                 %  the maximum time has elapsed and
                                 %  joystick is not fully pressed.  Abort
                                 %  the trial
-                                fprintf('\t%s drifted out of engage state at %0.3f sec without fully pressing joystick.\n',p.trial.session.subject,p.trial.specs.timing.response_cue.reaction_time);
+                                fprintf('\t%s drifted out of engage state at %0.3f sec without fully pressing joystick.\n',p.trial.session.subject,p.trial.specs.timing.response_cue.reaction_time);                                
                                 p.trial.outcome = aborted_trial('press drift error');
                                 p.trial.specs.timing.response_cue.start_time = NaN;
                                 p.trial.state_variables.trial_state = 'timeout';
                             end
                         end
-                    else
+                    else                        
                         %  Monkey broke fixation too early.  Give him a
                         %  timeout.
                         
-                        fprintf('\t%s broke fixation after %0.3f sec.\n',p.trial.session.subject,GetSecs-p.trial.specs.timing.response_cue.start_time);
-                        p.trial.outcome = aborted_trial('fixation break');
+                        fprintf('\t%s broke fixation after %0.3f sec.\n',p.trial.session.subject,GetSecs-p.trial.specs.timing.response_cue.start_time);                        
+                        p.trial.outcome = aborted_trial('fixation break');                        
                         p.trial.state_variables.trial_state = 'timeout';
                     end
                     
@@ -827,8 +848,8 @@ switch state
                     %  so give him a timeout
                     
                     fprintf('\t%s held joystick to end of response duration; this is a missed response.\n',p.trial.session.subject);
-                    p.trial.specs.timing.response_cue.start_time = NaN;
-                    p.trial.outcome = aborted_trial('miss');
+                    p.trial.specs.timing.response_cue.start_time = NaN;                    
+                    p.trial.outcome = aborted_trial('miss');                    
                     p.trial.state_variables.trial_state = 'timeout';
                 end
                 
@@ -890,7 +911,7 @@ switch state
                     %  trial now!
                     fprintf('\t%s completed error delay with joystick released.  He gets no reward (WOMP WOMP).\n',p.trial.session.subject);
                     p.trial.specs.timing.error_delay.start_time = NaN;
-                    p.trial.specs.timing.error_delay.eligible_start_time = NaN;
+                    p.trial.specs.timing.error_delay.eligible_start_time = NaN;                    
                     p.trial.outcome = completed_trial(false);
                     p.trial.state_variables.trial_state = 'error';
                 end
@@ -1019,68 +1040,27 @@ end
         p.functionHandles.rch.draw(window,cue_lum,background,sigma,center);
     end
 
-%     function ShowSymbolsMask
-%         %  ShowSymbolsMask
-%         %
-%         %  This function draws the symbol mask
-%
-%         window = p.trial.display.overlayptr;
-%         centers = p.trial.specs.features.symbol.centers;
-%         indx = p.trial.specs.features.symbol.position_order(1:p.trial.state_variables.current_symbol);
-%         only_zuul.symbol_masks.draw(window,centers,indx);
-%     end
+    function ShowSymbolsMask
+        %  ShowSymbolsMask
+        %
+        %  This function draws the symbol mask
+        
+        window = p.trial.display.overlayptr;
+        centers = p.trial.specs.features.symbol.centers;
+        indx = p.trial.specs.features.symbol.position_order(1:p.trial.state_variables.current_symbol);
+        only_zuul.symbol_masks.draw(window,centers,indx)
+    end
 
     function ShowSymbols
         %  ShowSymbols
         %
         %  This function draws the symbols.
         
-        %  Window into which to draw them
         win = p.trial.display.overlayptr;
-        
-        %  Positions in which symbols are drawn
-        positions = p.trial.specs.features.symbol.positions(1:p.trial.state_variables.current_symbol);
-        
-        %  Colors of symbols to use
-        color = zeros(p.trial.state_variables.current_symbol,3);
-        for ii=1:p.trial.state_variables.current_symbol
-            indx = strcmp(p.trial.condition.symbol_codes{ii}(1),p.trial.specs.features.symbol.color_names);
-            color(ii,:) = p.trial.specs.features.symbol.color_indx(indx);
-        end
-        
-        %  Rectangles into which to place symbols
-        %  At this point I am area preserving
-        outer_diameter = p.trial.specs.features.symbol.outer_diameter;
-        baseRect_C = [0 0 outer_diameter outer_diameter];
-        baseRect_S = [0 0 sqrt(0.25*pi*outer_diameter^2) sqrt(0.25*pi*outer_diameter^2)];
-        centers = p.trial.specs.features.symbol.centers(positions,:);
-        
-        %  Draw symbols
-        for ii=1:p.trial.state_variables.current_symbol
-            switch p.trial.condition.symbol_codes{ii}(2)
-                case 'S'
-                    Screen('FillRect',win,color(ii,:),CenterRectOnPointd(baseRect_S,centers(ii,1),centers(ii,2)));
-                case 'C'
-                    Screen('FillOval',win,color(ii,:),CenterRectOnPointd(baseRect_C,centers(ii,1),centers(ii,2)));
-            end
-        end
-        
-        inner_diameter = p.trial.specs.features.symbol.inner_diameter;
-        baseRect_C = [0 0 inner_diameter inner_diameter];
-        baseRect_S = [0 0 sqrt(0.25*pi*inner_diameter^2) sqrt(0.25*pi*inner_diameter^2)];
-        
-        %  Draw in background for symbols without fill
-        for ii=1:p.trial.state_variables.current_symbol
-            switch p.trial.condition.symbol_codes{ii}(3)
-                case 'O'
-                    switch p.trial.condition.symbol_codes{ii}(2)
-                        case 'S'
-                            Screen('FillRect',win,p.trial.specs.features.symbol.background,CenterRectOnPointd(baseRect_S,centers(ii,1),centers(ii,2)));
-                        case 'C'
-                            Screen('FillOval',win,p.trial.specs.features.symbol.background,CenterRectOnPointd(baseRect_C,centers(ii,1),centers(ii,2)));
-                    end
-            end
-        end
+        order = p.trial.specs.features.symbol.position_order(1:p.trial.state_variables.current_symbol);
+        color = repmat([p.trial.condition.symbol_features(order-3*(order>3)).color],3,1);
+        rect = p.trial.specs.features.symbol.positions(order,:)';
+        Screen('FillOval',win,color,rect);
     end
 
     function check_joystick_status

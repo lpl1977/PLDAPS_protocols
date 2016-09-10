@@ -32,8 +32,12 @@ p.trial.specs.timing.symbol.interval = 0;
 
 %  Randomized reward / error delay duration.
 max_delay = 1.25;
-constant_part = 0.5;
-mean_random_part = 0.5;
+constant_part = 0.;
+mean_random_part = 0;
+
+% max_delay = 1.25;
+% constant_part = 0.5;
+% mean_random_part = 0.5;
 random_part = min(exprnd(mean_random_part),max_delay-constant_part);
 p.trial.specs.timing.reward_delay.duration = constant_part + random_part;
 p.trial.specs.timing.error_delay.duration = p.trial.specs.timing.reward_delay.duration;
@@ -54,7 +58,9 @@ p.trial.training_flags.enforce_fixation = false;
 %  Log contrast for discriminandum
 %
 %p.trial.specs.features.log10C = sort([-1 -1.25 -1.5 -1.75 -2],'descend');
-p.trial.specs.features.log10C = sort([-1 -1.25],'descend');
+p.trial.specs.features.log10C = sort([-1 -1.25 -1.5],'descend');
+%p.trial.specs.features.log10C = sort(-1,'descend');
+
 
 %  Set the number of mask trials per set or noset trial
 %  If maskratio is 1, then there is a mask trial for every set trial AND a
@@ -64,6 +70,6 @@ p.trial.specs.features.log10C = sort([-1 -1.25],'descend');
 %  for every two set trials and a mask trial for every two notset trials.
 %  In this case (maskratio < 1), I will need to increase the number of set
 %  and nottset trials.
-p.trial.specs.features.maskratio = 1;
+p.trial.specs.features.maskratio = 2;
 p.trial.specs.features.ntotal = 2000;
 
