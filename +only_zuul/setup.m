@@ -63,9 +63,9 @@ p.trial.display.clut.bRed = 24*[1 1 1]';
 %  Load the joystick calibration file
 switch p.trial.session.subject
     case 'Meatball'
-        p.trial.joystick.default.beta = getfield(load('/home/astaroth/Documents/MATLAB/settings/JoystickSettings_Meatball.mat','beta'),'beta');        
+        p.trial.joystick.default.beta = getfield(load('~/Documents/MATLAB/settings/JoystickSettings_Meatball.mat','beta'),'beta');        
     case 'Murray'
-        p.trial.joystick.default.beta = getfield(load('/home/astaroth/Documents/MATLAB/settings/JoystickSettings_Murray.mat','beta'),'beta');
+        p.trial.joystick.default.beta = getfield(load('~/Documents/MATLAB/settings/JoystickSettings_Murray.mat','beta'),'beta');
 end
 
 %  Thresholds between zones
@@ -79,6 +79,7 @@ p.trial.joystick.default.threshold = [2 8 14.5 15];
 p.trial.joystick.joystick_warning = p.trial.joystick.default;
 p.trial.joystick.joystick_warning.threshold = [2 10 14 15];
 p.trial.joystick.engage = p.trial.joystick.joystick_warning;
+p.trial.joystick.response_cue = p.trial.joystick.default;
 
 %
 %  TIMING
@@ -194,7 +195,7 @@ feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
 %  CONDITIONS MATRIX
 %
 
-ntotal = p.trial.specs.features.ntotal;
+ntotal = 10000;
 log10C = p.trial.specs.features.log10C;
 
 %  Luminances

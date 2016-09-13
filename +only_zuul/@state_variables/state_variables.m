@@ -6,6 +6,7 @@ classdef state_variables
         trial_state = 'start';
         release_trial 
         press_trial 
+        
         current_symbol = 1;
         
         wait_for_release = false;
@@ -22,7 +23,10 @@ classdef state_variables
         
         set_trial
         notset_trial
-        mask_trial = false;
+        
+        show_fixation_cue = false;
+        show_symbols = false;
+        show_response_cue = false;
     end
     
     methods 

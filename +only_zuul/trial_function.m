@@ -114,75 +114,36 @@ switch state
         p.functionHandles.performance.update(p.trial.condition,p.trial.outcome);
         p.functionHandles.performance.display_performance;
         
-        
-        
-        
-        %       only_zuul.performance.print_summary_performance(p.trial.specs.performance); %,p.trial.specs.features.log10C);
-        
-        %  Display aborts
-        %        only_zuul.performance.print_summary_trial_aborts(p.trial.specs.performance);
-        
-        %
-        %         fprintf('MASK current performance:\n');
-        %         only_zuul.performance.print_performance(p.trial.specs.performance.mask,p.trial.specs.features.log10C);
-        %
-        %         fprintf('SET current performance:\n');
-        %         only_zuul.performance.print_performance(p.trial.specs.performance.set,p.trial.specs.features.log10C);
-        %
-        %         fprintf('NOTSET current performance:\n');
-        %         only_zuul.performance.print_performance(p.trial.specs.performance.notset,-Inf);
-        
-        %         completed = double(p.trial.specs.performance.completed); attempted
-        %         = double(p.trial.specs.performance.attempted); correct =
-        %         double(p.trial.specs.performance.correct);
-        %
-        %         fixation_breaks =
-        %         double(p.trial.specs.performance.fixation_break);
-        %         failed_to_initiate =
-        %         double(p.trial.specs.performance.failed_to_initiate);
-        %         joystick_warning_elapsed =
-        %         double(p.trial.specs.performance.joystick_warning_elapsed);
-        %         eye_warning_elapsed =
-        %         double(p.trial.specs.performance.eye_warning_elapsed);
-        %         early_releases = double(p.trial.specs.performance.early_release);
-        %         early_presses = double(p.trial.specs.performance.early_press);
-        %         release_drift_errors =
-        %         double(p.trial.specs.performance.release_drift_error);
-        %         press_drift_errors =
-        %         double(p.trial.specs.performance.press_drift_error); misses =
-        %         double(p.trial.specs.performance.miss);
-        %
-        %         fprintf('Current performance:\n'); fprintf('\tCompleted:
-        %         %d of %d (%0.3f)\n',completed,attempted,completed/attempted);
-        %         fprintf('\tCorrectly completed:  %d of %d
-        %         (%0.3f)\n',correct,completed,correct/completed); fprintf('\n');
-        %
-        %         for i=1:length(p.trial.specs.features.log10C)
-        %             fprintf('         R (%5.2f):  %4d R %4d P %4d T, %5.2f
-        %             correct | %5.2f
-        %             R\n',p.trial.specs.features.log10C(i),p.trial.specs.performance.matrix(i,:),p.trial.specs.performance.matrix(i,1)/p.trial.specs.performance.matrix(i,3),p.trial.specs.performance.matrix(i,1)/p.trial.specs.performance.matrix(i,3));
-        %         end fprintf('         P (%5.2f):  %4d R %4d P %4d T, %5.2f
-        %         correct | %5.2f
-        %         R\n',-Inf,p.trial.specs.performance.matrix(end,:),p.trial.specs.performance.matrix(end,2)/p.trial.specs.performance.matrix(end,3),p.trial.specs.performance.matrix(end,1)/p.trial.specs.performance.matrix(end,3));
-        %         fprintf('\n');
-        %
-        %         fprintf('Trial aborts (%d of %d
-        %         trials):\n',attempted-completed,attempted); fprintf('\tFixation
-        %         breaks:          %3d\n',fixation_breaks); fprintf('\tFailed to
-        %         initiate:       %3d\n',failed_to_initiate); fprintf('\tJoystick
-        %         warning elapsed: %3d\n',joystick_warning_elapsed); fprintf('\tEye
-        %         warning elapsed:      %3d\n',eye_warning_elapsed);
-        %         fprintf('\tEarly releases:           %3d\n',early_releases);
-        %         fprintf('\tEarly presses:            %3d\n',early_presses);
-        %         fprintf('\tRelease drift errors:
-        %         %3d\n',release_drift_errors); fprintf('\tPress drift errors:
-        %         %3d\n',press_drift_errors); fprintf('\tMisses:
-        %         %3d\n',misses); fprintf('\n');
-        
     case p.trial.pldaps.trialStates.frameDraw
         %  Final image has been calculated and will now be drawn
         
-        %  Got nothing here on my end
+        %
+        %  Drawing done in every frame
+        %
+        
+        %  Display joystick status to screen
+        display_joystick_status;
+        
+        %  Display fixation window
+        display_fixation_window;
+        
+        %  If enabled, show the symbols
+        if(p.trial.state_variables.show_symbols)
+            ShowSymbols;
+        end
+        
+        %  If enabled, show the response cue
+        if(p.trial.state_variables.show_response_cue)
+            ShowResponseCue;
+        end
+        
+        %  If enabled, show fixation cue
+        if(p.trial.state_variables.show_fixation_cue)
+            ShowFixationCue;
+        end
+        
+    case p.trial.pldaps.trialStates.frameDrawingFinished
+        
         
     case p.trial.pldaps.trialStates.frameUpdate
         %  Frame Update is called once after the last frame is done (or
@@ -199,26 +160,11 @@ switch state
         %  Frame PrepareDrawing is where you can prepare all drawing and
         %  task state control.
         
-        %
-        %  Check trial time first; end trial if exceeds maximum
-        %
         
-        if(p.trial.ttime > p.trial.pldaps.maxTrialLength-p.trial.specs.constants.minTrialTime)
-            fprintf('\t%s did not initiate trial within %0.3f sec.\n',p.trial.session.subject,p.trial.pldaps.maxTrialLength-60);
-            p.trial.outcome = aborted_trial('failed to initiate');
-            fprintf('END TRIAL %d.\n\n',p.trial.pldaps.iTrial);
-            p.trial.flagNextTrial = true;
-        end
-        
-        %
-        %  Drawing done in every frame
-        %
-        
-        %  Display joystick status to screen
-        display_joystick_status;
-        
-        %  Display fixation window
-        display_fixation_window;
+        %  Reset drawing state variables
+        p.trial.state_variables.show_fixation_cue = false;
+        p.trial.state_variables.show_symbols = false;
+        p.trial.state_variables.show_response_cue = false;
         
         %
         %  Control trial events based on trial state
@@ -235,6 +181,9 @@ switch state
                 
                 fprintf('START state\n');
                 
+                %  Always show a fixation cue
+                p.trial.state_variables.show_fixation_cue = true;
+                
                 if(~p.trial.state_variables.joystick_released)
                     %  Monkey does not have joystick released.
                     fprintf('\t%s started trial without joystick released; go to joystick warning.\n',p.trial.session.subject);
@@ -246,15 +195,15 @@ switch state
                     p.trial.state_variables.trial_state = 'engage';
                 end
                 
-                %  Show fixation cue
-                ShowFixationCue;
-                
             case 'engage'
                 
                 %  STATE:  engage
                 
                 %  Start trial once monkey has joystick engaged and is
                 %  fixating.
+                
+                %  Show fixation cue except during blink
+                p.trial.state_variables.show_fixation_cue = true;
                 
                 if(isnan(p.trial.specs.timing.engage.start_time))
                     
@@ -263,8 +212,7 @@ switch state
                     p.trial.specs.timing.engage.start_time = GetSecs;
                     p.trial.specs.timing.engage.cue_start_time = GetSecs;
                     
-                    %  Show fixation cue
-                    ShowFixationCue;
+                    %ShowFixationCue;
                     
                     fprintf('ENGAGE state\n');
                     
@@ -289,11 +237,25 @@ switch state
                 else
                     
                     %  We are still in the engage state.  We will continue
-                    %  checking the joystick and fixation and will blinked
-                    %  the fixation cue as long as the monkey has both not
-                    %  engaged the joystick and fixated.
+                    %  checking the joystick and fixation and will blink
+                    %  the fixation cue as long as the monkey has neither
+                    %  engaged the joystick, fixated, nor elapsed the total
+                    %  trial time limit.
                     
-                    if(p.trial.state_variables.joystick_engaged && p.trial.state_variables.fixating)
+                    %  Check trial time first; cut him off if he doesn't
+                    %  have time to actually complete the trial
+                    
+                    if(p.trial.ttime > p.trial.pldaps.maxTrialLength-p.trial.specs.constants.minTrialTime)
+                        fprintf('\t%s did not initiate trial within %0.3f sec.  Give him a timeout.\n',p.trial.session.subject,p.trial.pldaps.maxTrialLength-60);
+                        
+                        %  Nothing more to see so set trial state to blank
+                        p.trial.outcome = aborted_trial('failed to initiate');
+                        p.trial.specs.timing.engage.start_time = NaN;
+                        p.trial.specs.timing.engage.cue_start_time = NaN;
+                        p.trial.state_variables.trial_state = 'timeout';
+                        p.trial.state_variables.show_fixation_cue = false;
+                        
+                    elseif(p.trial.state_variables.joystick_engaged && p.trial.state_variables.fixating)
                         
                         %  The monkey has both joystick engaged and is
                         %  fixating.  Print some feedback, reset the timing
@@ -304,7 +266,7 @@ switch state
                         p.trial.state_variables.trial_state = 'delay';
                         
                         %  Show fixation cue
-                        ShowFixationCue;
+                        %ShowFixationCue;
                         
                     elseif(p.trial.state_variables.joystick_pressed || p.trial.state_variables.joystick_press_buffer)
                         
@@ -315,13 +277,13 @@ switch state
                         p.trial.state_variables.trial_state = 'joystick_warning';
                         
                         %  Show fixation cue
-                        ShowFixationCue;
+                        %ShowFixationCue;
                         
                     elseif(p.trial.specs.timing.engage.cue_start_time > GetSecs - p.trial.specs.timing.engage.cue_display_time)
                         
                         %  We're not yet in the blink so show the fixation
                         %  cue regarless.
-                        ShowFixationCue;
+                        %ShowFixationCue;
                         
                     elseif(p.trial.specs.timing.engage.cue_start_time <= GetSecs - (p.trial.specs.timing.engage.cue_display_time + p.trial.specs.timing.engage.cue_extinguish_time))
                         
@@ -330,7 +292,10 @@ switch state
                         p.trial.specs.timing.engage.cue_start_time = GetSecs;
                         
                         %  Show the fixation cue regardless
-                        ShowFixationCue;
+                        %ShowFixationCue;
+                    else
+                        %  We are in the blink so turn the fixation cue off
+                        p.trial.state_variables.show_fixation_cue = false;
                     end
                 end
                 
@@ -343,7 +308,11 @@ switch state
                 %  fixation cue as long as this is the case and we have not
                 %  yet reached the end of the delay period.
                 
-                ShowFixationCue;
+                
+                %  Always show a fixation cue
+                p.trial.state_variables.show_fixation_cue = true;
+                
+                %ShowFixationCue;
                 if(isnan(p.trial.specs.timing.delay.start_time))
                     p.trial.specs.timing.delay.start_time = GetSecs;
                     fprintf('DELAY state for %0.3f sec.\n',p.trial.specs.timing.delay.duration);
@@ -393,7 +362,10 @@ switch state
                 %  engage).
                 
                 %  Fixation cue will be red
-                ShowFixationCue;
+                
+                %  Always show a fixation cue unless he times out
+                p.trial.state_variables.show_fixation_cue = true;
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.joystick_warning.start_time))
                     
@@ -456,11 +428,12 @@ switch state
                     %  Stop the joystick warning tone
                     pds.audio.stop(p,'joystick_warning');
                     
-                    fprintf('\t%s elapsed his joystick warning interval.\nEND TRIAL %d.\n\n',p.trial.session.subject,p.trial.pldaps.iTrial);
+                    fprintf('\t%s elapsed his joystick warning interval.  Give him a timeout\n',p.trial.session.subject);
                     
                     p.trial.outcome = aborted_trial('joystick warning elapsed');
                     p.trial.specs.timing.joystick_warning.start_time = NaN;
-                    p.trial.flagNextTrial = true;
+                    p.trial.state_variables.trial_state = 'timeout';
+                    p.trial.state_variables.show_fixation_cue = false;
                 end
                 
             case 'eye_warning'
@@ -474,6 +447,9 @@ switch state
                 %  While in the eye warning we will blink the fixation cue
                 %  at him as in the engage state.
                 
+                %  Always show a fixation cue unless he times out or is in
+                %  a blink
+                p.trial.state_variables.show_fixation_cue = true;
                 
                 if(isnan(p.trial.specs.timing.eye_warning.start_time))
                     
@@ -487,7 +463,8 @@ switch state
                     pds.audio.play(p,'eye_warning',Inf);
                     
                     %  Show fixation cue
-                    ShowFixationCue;
+                    p.trial.state_variables.show_fixation_cue = true;
+                    %ShowFixationCue;
                 elseif(p.trial.specs.timing.eye_warning.start_time <= GetSecs - p.trial.specs.timing.eye_warning.duration)
                     
                     %  Monkey has failed to fixate during the warning
@@ -496,12 +473,13 @@ switch state
                     %  Stop the eye warning tone
                     pds.audio.stop(p,'eye_warning');
                     
-                    fprintf('\t%s elapsed his eye warning interval.\nEND TRIAL %d.\n\n',p.trial.session.subject,p.trial.pldaps.iTrial);
+                    fprintf('\t%s elapsed his eye warning interval.  Give him a timeout.\n',p.trial.session.subject);
                     
                     p.trial.outcome = aborted_trial('eye warning elapsed');
                     p.trial.specs.timing.eye_warning.start_time = NaN;
                     p.trial.specs.timing.eye_warning.cue_start_time = GetSecs;
-                    p.trial.flagNextTrial = true;
+                    p.trial.state_variables.trial_state = 'timeout';
+                    p.trial.state_variables.show_fixation_cue = false;
                 else
                     
                     %  We are still in the eye warning state.  We will
@@ -523,7 +501,7 @@ switch state
                         pds.audio.stop(p,'eye_warning');
                         
                         %  Show fixation cue
-                        ShowFixationCue;
+                        %ShowFixationCue;
                         
                     elseif(p.trial.state_variables.joystick_pressed || p.trial.state_variables.joystick_press_buffer)
                         
@@ -537,7 +515,7 @@ switch state
                         pds.audio.stop(p,'eye_warning');
                         
                         %  Show fixation cue
-                        ShowFixationCue;
+                        %ShowFixationCue;
                         
                     elseif(p.trial.state_variables.joystick_released || p.trial.state_variables.joystick_release_buffer)
                         
@@ -551,14 +529,13 @@ switch state
                         pds.audio.stop(p,'eye_warning');
                         
                         %  Show fixation cue
-                        ShowFixationCue;
-                        
+                        %ShowFixationCue;
                         
                     elseif(p.trial.specs.timing.eye_warning.cue_start_time > GetSecs - p.trial.specs.timing.eye_warning.cue_display_time)
                         
                         %  We're not yet in the blink so show the fixation
                         %  cue regarless.
-                        ShowFixationCue;
+                        %ShowFixationCue;
                         
                     elseif(p.trial.specs.timing.eye_warning.cue_start_time <= GetSecs - (p.trial.specs.timing.eye_warning.cue_display_time + p.trial.specs.timing.eye_warning.cue_extinguish_time))
                         
@@ -566,8 +543,12 @@ switch state
                         %  reset the cue start time.
                         p.trial.specs.timing.eye_warning.cue_start_time = GetSecs;
                         
-                        %  Show the fixation cue regardless
-                        ShowFixationCue;
+                        %  Show fixation cue
+                        %ShowFixationCue;
+                    else
+                        
+                        %  We're in the blink so turn off the fixation cue
+                        p.trial.state_variables.show_fixation_cue = false;
                     end
                 end
                 
@@ -583,18 +564,18 @@ switch state
                 %  Monkey should remain fixating with joystick engaged for
                 %  entire duration of this period
                 
-                ShowFixationCue;
+                %  Always show a fixation cue unless he aborts
+                p.trial.state_variables.show_fixation_cue = true;
+                
+                %  Always show symbols unless he aborts
+                p.trial.state_variables.show_symbols = true;
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.symbol.start_time))
                     p.trial.specs.timing.symbol.start_time = GetSecs;
                     
-                    if(p.trial.state_variables.mask_trial)
-                        fprintf('SYMBOL MASK, %d of 3 for %0.3f sec.\n',p.trial.state_variables.current_symbol,p.trial.specs.timing.symbol.display_time);
-                        ShowSymbolsMask;
-                    else
-                        fprintf('SYMBOL %s, %d of 3 for %0.3f sec.\n',p.trial.condition.symbol_codes{p.trial.state_variables.current_symbol},p.trial.state_variables.current_symbol,p.trial.specs.timing.symbol.display_time);
-                        ShowSymbols;
-                    end
+                    fprintf('SYMBOL %s, %d of 3 for %0.3f sec.\n',p.trial.condition.symbol_codes{p.trial.state_variables.current_symbol},p.trial.state_variables.current_symbol,p.trial.specs.timing.symbol.display_time);
+                    %ShowSymbols;
                     
                 elseif(~p.trial.state_variables.joystick_engaged)
                     %  Monkey released or pressed joystick early.
@@ -610,6 +591,8 @@ switch state
                     end
                     p.trial.state_variables.trial_state = 'timeout';
                     p.trial.specs.timing.symbol.start_time = NaN;
+                    p.trial.state_variables.show_fixation_cue = false;
+                    p.trial.state_variables.show_symbols = false;
                 elseif(~p.trial.state_variables.fixating)
                     %  Monkey broke fixation.
                     
@@ -618,18 +601,20 @@ switch state
                     p.trial.outcome = aborted_trial('fixation break');
                     p.trial.specs.timing.symbol.start_time = NaN;
                     p.trial.state_variables.trial_state = 'timeout';
+                    p.trial.state_variables.show_fixation_cue = false;
+                    p.trial.state_variables.show_symbols = false;
+                    
                 elseif(p.trial.specs.timing.symbol.start_time <= GetSecs - (p.trial.specs.timing.symbol.display_time + p.trial.specs.timing.symbol.interval))
                     %  We have reached the end of the current symbol, so
                     %  update
                     if(p.trial.specs.timing.symbol.interval==0 || p.trial.training_flags.continue_symbols)
-                        if(p.trial.state_variables.mask_trial)
-                            ShowSymbolsMask;
-                        else
-                            ShowSymbols;
-                        end
+                        %ShowSymbols;
                     end
                     p.trial.specs.timing.symbol.start_time = NaN;
                     if(p.trial.state_variables.current_symbol==3)
+                        if(~p.trial.training_flags.continue_symbols)
+                            p.trial.state_variables.show_symbols = false;
+                        end
                         p.trial.state_variables.trial_state = 'response_cue';
                     else
                         p.trial.state_variables.current_symbol = p.trial.state_variables.current_symbol + 1;
@@ -639,11 +624,11 @@ switch state
                     %  if we are not in the interval or if we are
                     %  continuing to show the symbols after the display
                     %  time
-                    if(p.trial.state_variables.mask_trial)
-                        ShowSymbolsMask;
-                    else
-                        ShowSymbols;
-                    end
+                    %ShowSymbols;
+                else
+                    %  We are in the interval between symbols so blank the
+                    %  symbol
+                    p.trial.state_variables.show_symbols = false;
                 end
                 
             case 'timeout'
@@ -657,6 +642,10 @@ switch state
                     fprintf('TIMEOUT state for %0.3f sec...  ',p.trial.specs.timing.timeout.duration);
                     p.trial.specs.timing.timeout.start_time = GetSecs;
                     
+                    %  Put in a really annoying sound here
+                    
+                    pds.audio.play(p,'timeout',1);
+                    
                 elseif(p.trial.specs.timing.timeout.start_time <= GetSecs - p.trial.specs.timing.timeout.duration)
                     fprintf('Timeout elapsed.\nEND TRIAL %d.\n\n',p.trial.pldaps.iTrial);
                     p.trial.specs.timing.timeout.start_time = NaN;
@@ -669,7 +658,8 @@ switch state
                 %  STATE:  error
                 
                 %  In this state we are going to give the monkey a time
-                %  penalty for an error and end the trial.
+                %  penalty for an error and end the trial.  No need for a
+                %  fixation dot
                 
                 if(isnan(p.trial.specs.timing.error_penalty.start_time))
                     fprintf('ERROR state for %0.3f sec...  ',p.trial.specs.timing.error_penalty.duration);
@@ -690,6 +680,11 @@ switch state
                 %  either press or release the joystick prior to the end of
                 %  the grace period in order to convey his response.
                 
+                %  Show fixation cue always in this state unless he aborts
+                p.trial.state_variables.show_fixation_cue = true;
+                
+                %  Only show repsonse cue if he is fixating and engaged
+                
                 if(isnan(p.trial.specs.timing.response_cue.start_time))
                     
                     p.trial.specs.timing.response_cue.reaction_time = NaN;
@@ -698,14 +693,12 @@ switch state
                     p.trial.specs.timing.response_cue.start_time = GetSecs;
                     
                     if(p.trial.training_flags.continue_symbols)
-                        if(p.trial.state_variables.mask_trial)
-                            ShowSymbolsMask;
-                        else
-                            ShowSymbols;
-                        end
+                        p.trial.state_variables.show_symbols = true;
+                        %ShowSymbols;
                     end
-                    ShowResponseCue;
-                    ShowFixationCue;
+                    p.trial.state_variables.show_response_cue = true;
+                    %ShowResponseCue;
+                    %ShowFixationCue;
                     
                     fprintf('RESPONSE state for trial %d.  Respond within %0.3f sec.\n',p.trial.pldaps.iTrial,p.trial.specs.timing.response_cue.grace);
                     
@@ -716,14 +709,12 @@ switch state
                     if(p.trial.state_variables.fixating)
                         
                         if(p.trial.training_flags.continue_symbols)
-                            if(p.trial.state_variables.mask_trial)
-                                ShowSymbolsMask;
-                            else
-                                ShowSymbols;
-                            end
+                            p.trial.state_variables.show_symbols = true;
+                            %ShowSymbols;
                         end
-                        ShowResponseCue;
-                        ShowFixationCue;
+                        p.trial.state_variables.show_response_cue = true;
+                        %ShowResponseCue;
+                        %ShowFixationCue;
                         
                         if(isnan(p.trial.specs.timing.response_cue.reaction_time))
                             if(~p.trial.state_variables.joystick_engaged)
@@ -771,6 +762,7 @@ switch state
                                 p.trial.outcome = aborted_trial('release drift error');
                                 p.trial.specs.timing.response_cue.start_time = NaN;
                                 p.trial.state_variables.trial_state = 'timeout';
+                                p.trial.state_variables.show_fixation_cue = false;
                             end
                             
                         elseif(p.trial.state_variables.joystick_pressed)
@@ -807,19 +799,21 @@ switch state
                                 %  the maximum time has elapsed and
                                 %  joystick is not fully pressed.  Abort
                                 %  the trial
-                                fprintf('\t%s drifted out of engage state at %0.3f sec without fully pressing joystick.\n',p.trial.session.subject,p.trial.specs.timing.response_cue.reaction_time);
+                                fprintf('\t%s drifted out of engage state at %0.3f sec without fully pressing joystick.  Give him a timeout.\n',p.trial.session.subject,p.trial.specs.timing.response_cue.reaction_time);
                                 p.trial.outcome = aborted_trial('press drift error');
                                 p.trial.specs.timing.response_cue.start_time = NaN;
                                 p.trial.state_variables.trial_state = 'timeout';
+                                p.trial.state_variables.show_fixation_cue = false;
                             end
                         end
                     else
                         %  Monkey broke fixation too early.  Give him a
                         %  timeout.
                         
-                        fprintf('\t%s broke fixation after %0.3f sec.\n',p.trial.session.subject,GetSecs-p.trial.specs.timing.response_cue.start_time);
+                        fprintf('\t%s broke fixation after %0.3f sec.  Give him a timeout.\n',p.trial.session.subject,GetSecs-p.trial.specs.timing.response_cue.start_time);
                         p.trial.outcome = aborted_trial('fixation break');
                         p.trial.state_variables.trial_state = 'timeout';
+                        p.trial.state_variables.show_fixation_cue = false;
                     end
                     
                 else
@@ -830,6 +824,7 @@ switch state
                     p.trial.specs.timing.response_cue.start_time = NaN;
                     p.trial.outcome = aborted_trial('miss');
                     p.trial.state_variables.trial_state = 'timeout';
+                    p.trial.state_variables.show_fixation_cue = false;
                 end
                 
             case 'error_delay'
@@ -840,7 +835,10 @@ switch state
                 %  the monkey is waiting to see if he gets his reward.
                 
                 
-                ShowFixationCue;
+                %  Fixation cue is always shown in this state unless he
+                %  aborts
+                p.trial.state_variables.show_fixation_cue = true;
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.error_delay.start_time))
                     
@@ -862,6 +860,7 @@ switch state
                         p.trial.outcome = aborted_trial('fixation break');
                         p.trial.state_variables.trial_state = 'timeout';
                         p.trial.specs.timing.error_delay.start_time = NaN;
+                        p.trial.state_variables.show_fixation_cue = false;
                     end
                     
                     if(p.trial.training_flags.release_for_reward && p.trial.state_variables.wait_for_release && p.trial.state_variables.joystick_released)
@@ -886,8 +885,7 @@ switch state
                 
                 if(~isnan(p.trial.specs.timing.error_delay.eligible_start_time) && ~p.trial.state_variables.wait_for_release)
                     
-                    %  Monkey completed error delay to se can get next
-                    %  trial now!
+                    %  Monkey completed error delay
                     fprintf('\t%s completed error delay with joystick released.  He gets no reward (WOMP WOMP).\n',p.trial.session.subject);
                     p.trial.specs.timing.error_delay.start_time = NaN;
                     p.trial.specs.timing.error_delay.eligible_start_time = NaN;
@@ -903,7 +901,10 @@ switch state
                 %  Monkey must release the joystick. Once this is done we
                 %  can give him his reward!
                 
-                ShowFixationCue;
+                %  Fixation cue is always shown in this state unless he
+                %  aborts
+                p.trial.state_variables.show_fixation_cue = true;
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.reward_delay.start_time))
                     
@@ -925,6 +926,7 @@ switch state
                         p.trial.outcome = aborted_trial('fixation break');
                         p.trial.state_variables.trial_state = 'timeout';
                         p.trial.specs.timing.reward_delay.start_time = NaN;
+                        p.trial.state_variables.show_fixation_cue = false;
                     end
                     
                     if(p.trial.training_flags.release_for_reward && p.trial.state_variables.wait_for_release && p.trial.state_variables.joystick_released)
@@ -964,7 +966,8 @@ switch state
                 
                 %  Provide the monkey with his just desserts.
                 
-                ShowFixationCue;
+                %  Fixation cue is not needed in this state
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.reward.start_time))
                     p.trial.specs.timing.reward.start_time = GetSecs;
@@ -972,6 +975,7 @@ switch state
                     pds.audio.play(p,'reward',1);
                     
                     fprintf('REWARD:  ');
+                    
                 elseif(p.trial.specs.timing.reward.start_time <= GetSecs - p.trial.stimulus.reward_amount)
                     fprintf('%s received reward for %0.3f sec.\n',p.trial.session.subject,p.trial.stimulus.reward_amount);
                     fprintf('END TRIAL %d.\n\n',p.trial.pldaps.iTrial);
@@ -979,6 +983,15 @@ switch state
                 end
                 
         end
+        
+        %  We are still in framePrepareDrawing
+        
+        %         %  Get the image under where the eye position cursor would go
+        %         baseRect = [0 0 p.trial.stimulus.fixdotW p.trial.stimulus.fixdotW];
+        %         centeredRect = CenterRectOnPointd(baseRect,p.trial.eyeX,p.trial.eyeY);
+        %         disp([p.trial.eyeX p.trial.eyeY]);
+        % %        p.functionHandles.imageArray = Screen('GetImage',p.trial.display.overlayptr,centeredRect,'backBuffer',0,1);
+        %         %disp(p.functionHandles.imageArray(1,1:8)');
 end
 
 %  NESTED FUNCTIONS BELOW
@@ -987,7 +1000,8 @@ end
     function ShowFixationCue
         %  ShowFixationCue
         %
-        %  This function draws a fixation sqaure
+        %  This function draws a fixation sqaure (needs to be in overlay
+        %  pointer because I've used color)
         
         win = p.trial.display.overlayptr;
         width = p.trial.specs.features.fixation.width;
@@ -1009,31 +1023,21 @@ end
         %  ShowResponseCue
         %
         %  This function draws a cue to indicate to monkey what his
-        %  repsonse should be.  It is embedded in a noise annulus.
+        %  repsonse should be.  It is embedded in a noise annulus.  It is
+        %  written to the display pointer.
         
-        window = p.trial.display.ptr;
+        win = p.trial.display.ptr;
         cue_lum = p.trial.condition.luminance-p.trial.display.bgColor(1);
         background = p.trial.display.bgColor(1);
         sigma = p.trial.specs.features.annulus.noise_sigma;
         center = p.trial.display.ctr([1 2]);
-        p.functionHandles.rch.draw(window,cue_lum,background,sigma,center);
+        p.functionHandles.rch.draw(win,cue_lum,background,sigma,center);
     end
-
-%     function ShowSymbolsMask
-%         %  ShowSymbolsMask
-%         %
-%         %  This function draws the symbol mask
-%
-%         window = p.trial.display.overlayptr;
-%         centers = p.trial.specs.features.symbol.centers;
-%         indx = p.trial.specs.features.symbol.position_order(1:p.trial.state_variables.current_symbol);
-%         only_zuul.symbol_masks.draw(window,centers,indx);
-%     end
 
     function ShowSymbols
         %  ShowSymbols
         %
-        %  This function draws the symbols.
+        %  This function draws the symbols into the overlay pointer
         
         %  Window into which to draw them
         win = p.trial.display.overlayptr;
@@ -1113,16 +1117,15 @@ end
                 case 'response_cue'
                     if(p.trial.training_flags.relative_response_threshold)
                         if(isnan(p.trial.specs.timing.response_cue.start_time))
-                            p.trial.joystick.response = p.trial.joystick.default;
                             p.trial.joystick.response_cue.threshold(1) = max(p.trial.joystick.position-3,p.trial.joystick.default.threshold(1));
                             p.trial.joystick.response_cue.threshold(2) = max(p.trial.joystick.position-2,p.trial.joystick.default.threshold(2));
                             p.trial.joystick.response_cue.threshold(3) = min(p.trial.joystick.position+2,p.trial.joystick.default.threshold(3));
                             p.trial.joystick.response_cue.threshold(4) = min(p.trial.joystick.position+3,p.trial.joystick.default.threshold(4));
                         end
                     else
-                        p.trial.joystick.response = p.trial.joystick.default;
+                        p.trial.joystick.response_cue = p.trial.joystick.default;
                     end
-                    [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.response);
+                    [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.response_cue);
                 otherwise
                     [zone,p.trial.joystick.position] = joystick.zones(p.trial.joystick.default);
             end
@@ -1172,7 +1175,7 @@ end
     function check_fixation_status
         %  Check fixation status
         width = p.trial.stimulus.fpWin;
-        if(p.trial.eyelink.useAsEyepos)
+        if(p.trial.eyelink.useAsEyepos && p.trial.eyelink.use)
             p.trial.state_variables.fixating = squarewindow(~p.trial.training_flags.enforce_fixation,p.trial.display.ctr(1:2)-[p.trial.eyeX p.trial.eyeY],width(1),width(2));
         else
             p.trial.state_variables.fixating = true;
