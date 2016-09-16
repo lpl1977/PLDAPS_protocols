@@ -179,6 +179,7 @@ radius = p.trial.specs.features.symbol.radius;
 dx = radius*cos(pi/6);
 dy = radius*sin(pi/6);
 p.trial.specs.features.symbol.positions = [centeredRect + [-dx -dy -dx -dy]; centeredRect + [dx -dy dx -dy]; centeredRect + [0 radius 0 radius] ; centeredRect + [-dx dy -dx dy]; centeredRect + [0 -radius 0 -radius]; centeredRect + [dx dy dx dy]];
+p.trial.specs.features.symbol.polar = {sprintf('210%c',char(176)), sprintf('-30%c',char(176)), sprintf('90%c',char(176)), sprintf('150%c',char(176)), sprintf('-90%c',char(176)), sprintf('30%c',char(176))};
 ctr = [p.trial.display.ctr(1) p.trial.display.ctr(2)];
 p.trial.specs.features.symbol.centers = [ctr + [-dx -dy] ; ctr + [dx -dy] ; ctr + [0 radius] ; ctr + [-dx dy] ; ctr + [0 -radius] ; ctr + [dx dy]];
 
@@ -198,13 +199,13 @@ feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
 %
 %  Get ready to track performance
 %
-p.functionHandles.performance = only_zuul.performance.performance(p.trial.specs.features.log10C);
+p.functionHandles.performance = only_zuul.performance(p.trial.specs.features.log10C);
 
 %
 %  CONDITIONS MATRIX
 %
 
-ntrials = 10000;
+ntrials = 1000;
 log10C = p.trial.specs.features.log10C;
 
 %  Luminances
@@ -283,12 +284,15 @@ B = repmat(B,nblocks,1);
 blocknum = repmat(1:nblocks,2*nlum*lcm(nsets,nnotsets),1);
 B(:,2) = blocknum(:);
 
+%  Initialize trial indexing
+p.functionHandles.indexing = only_zuul.indexing(B(:,2));
+
 %  Now go through and shuffle the trials within the blocks.
 
-for i=1:nblocks
-    indx = B(:,2)==i;
-    A(indx,:) = Shuffle(A(indx,:),2);
-end
+% for i=1:nblocks
+%     indx = B(:,2)==i;
+%     A(indx,:) = Shuffle(A(indx,:),2);
+% end
 
 %  Features of the trials
 %

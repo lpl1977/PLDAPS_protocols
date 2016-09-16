@@ -2,12 +2,6 @@ classdef performance < handle
     %PERFORMANCE Class for keeping summary of performance on task
     %   Summary for outcomes of trials collected as a class as well as
     %   display functions
-    %
-    %  There are two trial types:  set and notset
-    %  Contrasts are in log10C; only set trials have varying contrast
-    %
-    %  I would like to see total number of attempts, total completed, total
-    %  correct, performance by trial type and contrast, and total aborts
     
     properties
         attempted = 0;
@@ -25,36 +19,47 @@ classdef performance < handle
             obj.correct.set = zeros(numel(log10C),1);
         end
         
-        %  Update with an outcome
-        function update(obj,condition,outcome)
-            ix = obj.log10C == condition.log10C;
+        %  Create outcome for aborted trial and update performance
+        function s = aborted_trial(obj,p,mssg)
+            s = struct(...
+                'completed',false,...
+                'abort',struct(...
+                'state',p.functionHandles.state_variables.trial_state,...
+                'time',GetSecs - p.trial.trstart,...
+                'message',mssg));
             
-            if(isfield(outcome,'completed'))
-                obj.attempted = obj.attempted + 1;
-                obj.completed.total = obj.completed.total + outcome.completed;
-                switch condition.sequence_type
-                    case 'set'
-                        obj.completed.set(ix) = obj.completed.set(ix) + outcome.completed;
-                    case 'notset'
-                        obj.completed.notset = obj.completed.notset + outcome.completed;
-                end
-                
-                if(outcome.completed)
-                    obj.correct.total = obj.correct.total + outcome.correct;
-                    switch condition.sequence_type
-                        case 'set'
-                            obj.correct.set(ix) = obj.correct.set(ix) + outcome.correct;
-                        case 'notset'
-                            obj.correct.notset = obj.correct.notset + outcome.correct;
-                    end
-                else
-                    mssg = strrep(outcome.abort.message,' ','_');
-                    if(~isfield(obj.aborts,mssg))
-                        obj.aborts.(mssg) = 1;
-                    else
-                        obj.aborts.(mssg) = obj.aborts.(mssg) + 1;
-                    end
-                end
+            mssg = strrep(mssg,' ','_');
+            if(~isfield(obj.aborts,mssg))
+                obj.aborts.(mssg) = 1;
+            else
+                obj.aborts.(mssg) = obj.aborts.(mssg) + 1;
+            end
+        end
+        
+        %  Create outcome for completed trial and update performance
+        function s = completed_trial(obj,p,correct)
+            s = struct(...
+                'completed',true,...
+                'correct',correct,...
+                'reaction_time',p.trial.specs.timing.response_cue.reaction_time);
+            
+            ix = obj.log10C == p.trial.condition.log10C;
+            
+            obj.attempted = obj.attempted + 1;
+            obj.completed.total = obj.completed.total + 1;
+            switch p.trial.condition.sequence_type
+                case 'set'
+                    obj.completed.set(ix) = obj.completed.set(ix) + 1;
+                case 'notset'
+                    obj.completed.notset = obj.completed.notset + 1;
+            end
+            
+            obj.correct.total = obj.correct.total + correct;
+            switch p.trial.condition.sequence_type
+                case 'set'
+                    obj.correct.set(ix) = obj.correct.set(ix) + correct;
+                case 'notset'
+                    obj.correct.notset = obj.correct.notset + correct;
             end
         end
         
@@ -95,7 +100,19 @@ classdef performance < handle
                     fprintf('%*s:  %*d\n',n3,strrep(fnames{i},'_',' '),n2,obj.aborts.(fnames{i}));
                 end
                 fprintf('\n');
-            end            
+            end
+        end
+    end
+    
+    methods (Static)
+        
+        %  Create outcome for interrupted trial and update performance
+        function s = interrupted_trial(type)
+            if(type==1)
+                s = struct('interrupt','pause');
+            else
+                s = struct('interrupt','quit');
+            end
         end
     end
 end
