@@ -572,8 +572,8 @@ switch state
                     fprintf('SYMBOL %s, %d of 3 for %0.3f sec.\n',p.trial.condition.symbol_codes{p.trial.state_variables.current_symbol},p.trial.state_variables.current_symbol,p.trial.specs.timing.symbol.display_time);
                     
                 elseif(~p.trial.state_variables.joystick_engaged)
-                    
                     %  Monkey released or pressed joystick early.
+                    
                     if(p.trial.state_variables.joystick_released || p.trial.state_variables.joystick_release_buffer)
                         fprintf('\t%s released joystick at %0.3f sec, give him a timeout.\n',...
                             p.trial.session.subject,GetSecs-p.trial.specs.timing.symbol.start_time);
@@ -587,10 +587,9 @@ switch state
                     p.trial.specs.timing.symbol.start_time = NaN;
                     p.trial.state_variables.show_fixation_cue = false;
                     p.trial.state_variables.show_symbols = false;
-                
                 elseif(~p.trial.state_variables.fixating)
-                
                     %  Monkey broke fixation.
+                    
                     fprintf('\t%s broke fixation after %0.3f sec; give him a timeout.\n',...
                         p.trial.session.subject,GetSecs-p.trial.specs.timing.symbol.start_time);
                     p.trial.outcome = aborted_trial('fixation break');
@@ -600,9 +599,11 @@ switch state
                     p.trial.state_variables.show_symbols = false;
                     
                 elseif(p.trial.specs.timing.symbol.start_time <= GetSecs - (p.trial.specs.timing.symbol.display_time + p.trial.specs.timing.symbol.interval))
-
                     %  We have reached the end of the current symbol, so
                     %  update
+                    if(p.trial.specs.timing.symbol.interval==0 || p.trial.training_flags.continue_symbols)
+                        %ShowSymbols;
+                    end
                     p.trial.specs.timing.symbol.start_time = NaN;
                     if(p.trial.state_variables.current_symbol==3)
                         if(~p.trial.training_flags.continue_symbols)
@@ -612,16 +613,13 @@ switch state
                     else
                         p.trial.state_variables.current_symbol = p.trial.state_variables.current_symbol + 1;
                     end
-                    
                 elseif(p.trial.specs.timing.symbol.start_time > GetSecs - p.trial.specs.timing.symbol.display_time || p.trial.training_flags.continue_symbols)
-                
                     %  Nothing exciting happened.  Keep showing the symbol
                     %  if we are not in the interval or if we are
                     %  continuing to show the symbols after the display
                     %  time
-
+                    %ShowSymbols;
                 else
-                    
                     %  We are in the interval between symbols so blank the
                     %  symbol
                     p.trial.state_variables.show_symbols = false;
@@ -638,7 +636,8 @@ switch state
                     fprintf('TIMEOUT state for %0.3f sec...  ',p.trial.specs.timing.timeout.duration);
                     p.trial.specs.timing.timeout.start_time = GetSecs;
                     
-                    %  Play a really annoying sound here                    
+                    %  Put in a really annoying sound here
+                    
                     pds.audio.play(p,'timeout',1);
                     
                 elseif(p.trial.specs.timing.timeout.start_time <= GetSecs - p.trial.specs.timing.timeout.duration)
@@ -689,8 +688,11 @@ switch state
                     
                     if(p.trial.training_flags.continue_symbols)
                         p.trial.state_variables.show_symbols = true;
+                        %ShowSymbols;
                     end
                     p.trial.state_variables.show_response_cue = true;
+                    %ShowResponseCue;
+                    %ShowFixationCue;
                     
                     fprintf('RESPONSE state for trial %d.  Respond within %0.3f sec.\n',p.trial.pldaps.iTrial,p.trial.specs.timing.response_cue.grace);
                     
@@ -702,8 +704,12 @@ switch state
                         
                         if(p.trial.training_flags.continue_symbols)
                             p.trial.state_variables.show_symbols = true;
+                            %ShowSymbols;
                         end
-                        p.trial.state_variables.show_response_cue = true;                        
+                        p.trial.state_variables.show_response_cue = true;
+                        %ShowResponseCue;
+                        %ShowFixationCue;
+                        
                         if(isnan(p.trial.specs.timing.response_cue.reaction_time))
                             if(~p.trial.state_variables.joystick_engaged)
                                 p.trial.specs.timing.response_cue.reaction_time = GetSecs - p.trial.specs.timing.response_cue.start_time;
@@ -711,7 +717,6 @@ switch state
                         end
                         
                         if(p.trial.state_variables.joystick_released)
-                            
                             %  Monkey has released the joystick
                             
                             fprintf('\t%s released joystick with reaction time %0.3f sec ',p.trial.session.subject,p.trial.specs.timing.response_cue.reaction_time);
@@ -755,7 +760,6 @@ switch state
                             end
                             
                         elseif(p.trial.state_variables.joystick_pressed)
-                        
                             %  Monkey has pressed the joystick
                             
                             fprintf('\t%s pressed joystick with reaction time %0.3f sec ',p.trial.session.subject,p.trial.specs.timing.response_cue.reaction_time);
@@ -797,7 +801,6 @@ switch state
                             end
                         end
                     else
-                        
                         %  Monkey broke fixation too early.  Give him a
                         %  timeout.
                         
@@ -808,7 +811,6 @@ switch state
                     end
                     
                 else
-                    
                     %  Monkey has held joystick till end of grace period,
                     %  so give him a timeout
                     
@@ -830,6 +832,7 @@ switch state
                 %  Fixation cue is always shown in this state unless he
                 %  aborts
                 p.trial.state_variables.show_fixation_cue = true;
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.error_delay.start_time))
                     
@@ -895,6 +898,7 @@ switch state
                 %  Fixation cue is always shown in this state unless he
                 %  aborts
                 p.trial.state_variables.show_fixation_cue = true;
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.reward_delay.start_time))
                     
@@ -957,6 +961,7 @@ switch state
                 %  Provide the monkey with his just desserts.
                 
                 %  Fixation cue is not needed in this state
+                %ShowFixationCue;
                 
                 if(isnan(p.trial.specs.timing.reward.start_time))
                     p.trial.specs.timing.reward.start_time = GetSecs;
@@ -969,15 +974,29 @@ switch state
                     fprintf('%s received reward for %0.3f sec.\n',p.trial.session.subject,p.trial.stimulus.reward_amount);
                     fprintf('END TRIAL %d.\n\n',p.trial.pldaps.iTrial);
                     p.trial.flagNextTrial = true;
-                end                
-        end        
+                end
+                
+        end
+        
+        %  We are still in framePrepareDrawing
+        
+        %         %  Get the image under where the eye position cursor would go
+        %         baseRect = [0 0 p.trial.stimulus.fixdotW p.trial.stimulus.fixdotW];
+        %         centeredRect = CenterRectOnPointd(baseRect,p.trial.eyeX,p.trial.eyeY);
+        %         disp([p.trial.eyeX p.trial.eyeY]);
+        % %        p.functionHandles.imageArray = Screen('GetImage',p.trial.display.overlayptr,centeredRect,'backBuffer',0,1);
+        %         %disp(p.functionHandles.imageArray(1,1:8)');
 end
 
 %  NESTED FUNCTIONS BELOW
 
 
-%  Draw the fixation square into the overlay pointer
     function ShowFixationCue
+        %  ShowFixationCue
+        %
+        %  This function draws a fixation sqaure (needs to be in overlay
+        %  pointer because I've used color)
+        
         win = p.trial.display.overlayptr;
         width = p.trial.specs.features.fixation.width;
         baseRect = [0 0 width width];
@@ -994,8 +1013,13 @@ end
         Screen('FrameRect',win,color,centeredRect,linewidth);
     end
 
-%  Draw response cue into display pointer
     function ShowResponseCue
+        %  ShowResponseCue
+        %
+        %  This function draws a cue to indicate to monkey what his
+        %  repsonse should be.  It is embedded in a noise annulus.  It is
+        %  written to the display pointer.
+        
         win = p.trial.display.ptr;
         cue_lum = p.trial.condition.luminance-p.trial.display.bgColor(1);
         background = p.trial.display.bgColor(1);
@@ -1004,9 +1028,11 @@ end
         p.functionHandles.rch.draw(win,cue_lum,background,sigma,center);
     end
 
-%  Draw symbols into overlay pointer
     function ShowSymbols
-
+        %  ShowSymbols
+        %
+        %  This function draws the symbols into the overlay pointer
+        
         %  Window into which to draw them
         win = p.trial.display.overlayptr;
         
@@ -1057,8 +1083,11 @@ end
         end
     end
 
-%  Compare joystick against threshold and set flags
     function check_joystick_status
+        %  check_joystick_status
+        %
+        %  This function compares the joystick against threshold and sets
+        %  the flags
         
         %  If the debug flag is set then automatically set joystick status
         if(p.trial.debug_flags.joystick_zombie)
@@ -1105,8 +1134,12 @@ end
         p.trial.state_variables.joystick_pressed = zone==5;
     end
 
-%  Display joystick status to console screen
     function display_joystick_status
+        %  display_joystick_status
+        %
+        %  This function calls the function to display the joystick status
+        %  to the console screen
+        
         switch p.trial.state_variables.trial_state
             case 'joystick_warning'
                 joystick.display(p,p.trial.joystick.position,p.trial.joystick.joystick_warning.threshold);
@@ -1123,8 +1156,10 @@ end
         end
     end
 
-%  Display the fixation window
     function display_fixation_window
+        %  display_fixation_window
+        %
+        %  This function displays the fixation window
         win = p.trial.display.overlayptr;
         width = p.trial.stimulus.fpWin;
         baseRect = [0 0 width(1) width(2)];
@@ -1133,8 +1168,8 @@ end
         Screen('FrameRect',win,color,centeredRect);
     end
 
-%  Check if monkey is fixating
     function check_fixation_status
+        %  Check fixation status
         width = p.trial.stimulus.fpWin;
         if(p.trial.eyelink.useAsEyepos && p.trial.eyelink.use)
             p.trial.state_variables.fixating = squarewindow(~p.trial.training_flags.enforce_fixation,p.trial.display.ctr(1:2)-[p.trial.eyeX p.trial.eyeY],width(1),width(2));

@@ -8,10 +8,14 @@ function p = setup(p)
 %  that vary based on color, shape, and fill
 %
 
+%
+%  PLDAPS specific settings (settings PLDAPS expects to have been set)
+%
+
 %  Set trial master function
 p.trial.pldaps.trialFunction = 'only_zuul.trial_function';
 
-%  Get default colors and put the default bit names in
+%  Get default colors and put the default bit names
 p = defaultColors(p);
 p = defaultBitNames(p);
 
@@ -19,10 +23,13 @@ p = defaultBitNames(p);
 p.trial.stimulus.eyeW = 8;      % eye indicator width in pixels (for console display)
 p.trial.stimulus.cursorW = 8;   % cursor width in pixels (for console display)
 
+%  Trial duration information
+p.trial.pldaps.maxTrialLength = 5*60;
+p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
+
 %  Put additional colors into the human and monkey CLUT
 p.trial.display.humanCLUT(16,:) = [0 0 1];
 p.trial.display.monkeyCLUT(16,:) = p.trial.display.bgColor;
-
 p.trial.display.humanCLUT(17:25,:) = ...
      [    0    0.4470    0.7410     %  Blue
     0.8500    0.3250    0.0980      %  Orange
@@ -35,7 +42,9 @@ p.trial.display.humanCLUT(17:25,:) = ...
     1.000     0         0];         %  Red   
 p.trial.display.monkeyCLUT(17:25,:) = p.trial.display.humanCLUT(17:25,:);
 
-%  For the sake of convenience define some references to the colors
+%  For the sake of convenience define some names to references to the
+%  colors.  Remember hWhite means human white whereas bWhite means both
+%  white.  m{color} seems like a really bad idea.
 p.trial.display.clut.hWhite = 5*[1 1 1]';
 p.trial.display.clut.bWhite = 7*[1 1 1]';
 p.trial.display.clut.hCyan = 8*[1 1 1]';
@@ -44,7 +53,6 @@ p.trial.display.clut.hGreen = 12*[1 1 1]';
 p.trial.display.clut.hRed = 13*[1 1 1]';
 p.trial.display.clut.hBlack =14*[1 1 1]';
 p.trial.display.clut.hBlue = 15*[1 1 1]';
-
 p.trial.display.clut.bBlue = 16*[1 1 1]';
 p.trial.display.clut.bOrange = 17*[1 1 1]';
 p.trial.display.clut.bYellow = 18*[1 1 1]';
@@ -53,7 +61,6 @@ p.trial.display.clut.bGreen = 20*[1 1 1]';
 p.trial.display.clut.bCyan = 21*[1 1 1]';
 p.trial.display.clut.bScarlet = 22*[1 1 1]';
 p.trial.display.clut.bGray = 23*[1 1 1]';
-
 p.trial.display.clut.bRed = 24*[1 1 1]';
 
 %
@@ -152,8 +159,7 @@ p.trial.specs.features.annulus.outer_diameter = 150;
 p.trial.specs.features.annulus.inner_diameter = 60;
 p.trial.specs.features.annulus.noise_sigma = 0.2149;
 
-
-%  Symbols / Symbol Masks
+%  Symbols
 p.trial.specs.features.symbol.color_indx = [16 17 18 19 20 21 22];
 p.trial.specs.features.symbol.color_names = {'B','O','Y','P','G','C','S'};
 
@@ -176,10 +182,6 @@ p.trial.specs.features.symbol.positions = [centeredRect + [-dx -dy -dx -dy]; cen
 ctr = [p.trial.display.ctr(1) p.trial.display.ctr(2)];
 p.trial.specs.features.symbol.centers = [ctr + [-dx -dy] ; ctr + [dx -dy] ; ctr + [0 radius] ; ctr + [-dx dy] ; ctr + [0 -radius] ; ctr + [dx dy]];
 
-%  Trial duration information
-p.trial.pldaps.maxTrialLength = 5*60;
-p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
-
 %
 %  Constants
 %
@@ -188,14 +190,21 @@ p.trial.specs.constants.TrialsPerBlock = [];
 p.trial.specs.constants.maxBlocks = [];
 p.trial.specs.constants.maxTrials = [];
 
+%
 %  Subject specific timing parameters / actions
+%
 feval(str2func(strcat('only_zuul.',p.trial.session.subject)),p);
+
+%
+%  Get ready to track performance
+%
+p.functionHandles.performance = only_zuul.performance.performance(p.trial.specs.features.log10C);
 
 %
 %  CONDITIONS MATRIX
 %
 
-ntotal = 10000;
+ntrials = 10000;
 log10C = p.trial.specs.features.log10C;
 
 %  Luminances
@@ -233,7 +242,8 @@ nnotsets = size(notsets,1);
 
 %  Set up trial and block counts
 p.trial.specs.constants.TrialsPerBlock = 2*nlum*lcm(nsets,nnotsets);
-nblocks = floor(ntotal/p.trial.specs.constants.TrialsPerBlock);
+nblocks = ceil(ntrials/p.trial.specs.constants.TrialsPerBlock);
+ntrials = nblocks*p.trial.specs.constants.TrialsPerBlock;
 p.trial.specs.constants.maxBlocks = nblocks;
 p.trial.specs.constants.maxTrials = p.trial.specs.constants.maxBlocks*p.trial.specs.constants.TrialsPerBlock;
 
@@ -241,7 +251,7 @@ p.trial.specs.constants.maxTrials = p.trial.specs.constants.maxBlocks*p.trial.sp
 %  Column order:
 %  1--luminance
 %  2--log10C
-%  3--trial class (1==set/release, 2==notset/press)
+%  3--trial class (1==set/release, 2==notset/press, 3==null/release, 4==null/press)
 %  4--index into sequence identifier
 
 A = zeros(p.trial.specs.constants.TrialsPerBlock,4);
@@ -268,7 +278,7 @@ A = repmat(A,nblocks,1);
 
 B = zeros(p.trial.specs.constants.TrialsPerBlock,2);
 
-B(1:2*nlum*lcm(nsets,nnotsets),1) = (1:2*nlum*lcm(nsets,nnotsets))';
+B(:,1) = (1:2*nlum*lcm(nsets,nnotsets))';
 B = repmat(B,nblocks,1);
 blocknum = repmat(1:nblocks,2*nlum*lcm(nsets,nnotsets),1);
 B(:,2) = blocknum(:);
@@ -284,28 +294,30 @@ end
 %
 %  luminance -- for stimulus preparation
 %  log10C -- for display
-%  sequence_type -- set/release or notset/press
+%  sequence_type -- set or notset
 %  symbol_codes -- array of strings describing symbols
+%  response_type -- release or press
 
-ntrials = size(A,1);
 c = cell(1,ntrials);
 for i=1:ntrials
     c{i}.luminance = A(i,1);
     c{i}.log10C = A(i,2);
-    if(A(i,3)==1)
-        c{i}.sequence_type = 'set';
-        c{i}.symbol_codes = {sets{A(i,4),1},sets{A(i,4),2},sets{A(i,4),3}};
-    else
-        c{i}.sequence_type = 'notset';
-        c{i}.symbol_codes = {notsets{A(i,4),1},notsets{A(i,4),2},notsets{A(i,4),3}};
-    end    
+    switch A(i,3)
+        case 1
+            c{i}.sequence_type = 'set';
+            c{i}.symbol_codes = {sets{A(i,4),1},sets{A(i,4),2},sets{A(i,4),3}};
+            c{i}.response_type = 'release';
+        case 2
+            c{i}.sequence_type = 'notset';
+            c{i}.symbol_codes = {notsets{A(i,4),1},notsets{A(i,4),2},notsets{A(i,4),3}};
+            c{i}.response_type = 'press';
+    end
     c{i}.trial_number = B(i,1);
     c{i}.block_number = B(i,2);
 end
 p.conditions = c;
 
-%  Maximum number of trials -- set this to a number much bigger than ntrials
-p.trial.pldaps.finish = 10*ntrials;
+%  Maximum number of trials -- set this to a number bigger than ntrials so
+%  that PLDAPS doesn't automatically quit on us
+p.trial.pldaps.finish = 2*ntrials;
 
-%  Get ready to track performance
-p.functionHandles.performance = only_zuul.performance.performance(p.trial.specs.features.log10C);

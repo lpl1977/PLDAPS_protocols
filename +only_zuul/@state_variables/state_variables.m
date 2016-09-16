@@ -1,5 +1,5 @@
 classdef state_variables
-    %STATE_VARIABLES State variables with trials of Only_Zuul
+    %STATE_VARIABLES State variables for trials of only_zuul
     %   All the state variables for controlling a trial
     
     properties        
@@ -32,7 +32,7 @@ classdef state_variables
     methods 
         %  Class constructor method
         function obj = state_variables(condition)
-            obj.release_trial = strcmp('set',condition.sequence_type);
+            obj.release_trial = strcmp('release',condition.response_type);
             obj.press_trial = ~obj.release_trial;
             
             obj.set_trial = strcmp('set',condition.sequence_type);
