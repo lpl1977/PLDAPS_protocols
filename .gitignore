@@ -1,0 +1,5 @@
+#  Pldaps preferences, might be here by accident
+Saved_pldaps_prefs*
+
+#  matlab backup files
+*.m~
