@@ -20,6 +20,7 @@ switch state
         
         p.trial.condition = p.conditions{p.trial.pldaps.iTrial};
         fprintf('%s\n',p.trial.condition.text);
+        p.functionHandles.analogStickCursorObj.visible = true;
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  Clean Up and Save, post trial management
@@ -30,8 +31,11 @@ switch state
       
     case p.trial.pldaps.trialStates.frameDraw
         
-        analogStick.drawCursor(p,p.trial.display.ptr,p.functionHandles.analogStickObj.screenPosition);
-
+        %  Draw the cursor (there is an internal check for cursor
+        %  visibility).
+        screenPosition = p.functionHandles.analogStickObj.screenPosition;
+        p.functionHandles.analogStickCursorObj.drawCursor(screenPosition);    
+        
     case p.trial.pldaps.trialStates.frameUpdate
         %  Frame Update, including getting data from mouse or keyboard and
         %  also getting data from Eyelink and Datapixx ADC.  This is where

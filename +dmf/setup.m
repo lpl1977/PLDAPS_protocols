@@ -40,14 +40,15 @@ shapes = {'triangle','diamond','pentagon'};
 S = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 nSymbols = size(S.symbolCodes,1);
 
-rewardedResponses = {'left','center','right'};
-
+%rewardedResponses = {'left','center','right'};
+%rewardedResponses = {'left', 'left', 'center', 'right', 'right'};
+rewardedResponses = {'center'};
 
 p.functionHandles.sequences = S;
 
 c = cell(nSymbols*length(rewardedResponses),1);
 for i=1:nSymbols
-    for j=[1 3]
+    for j=1:length(rewardedResponses)
         c{i+(j-1)*nSymbols}.symbolIndex = i;
         c{i+(j-1)*nSymbols}.symbol.color = S.features.colors{S.symbolCodes(i,1)};
         c{i+(j-1)*nSymbols}.symbol.pattern = S.features.patterns{S.symbolCodes(i,2)};
