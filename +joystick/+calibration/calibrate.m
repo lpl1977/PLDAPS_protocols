@@ -11,17 +11,27 @@ function analogStickCalibration = calibrate(p)
 %  ll2833@columbia.edu
 %  January 2017
 
+daq = p.trial.analogStick.dataSource;
+fields = textscan(daq,'%s','delimiter','.');
+daq = fields{1}{1};
+
 figure(1);
 clf;
 lab = {'center','left','right','up','down','move it all around'};
+minval = 0;
+maxval = 0;
+for i=1:6
+    minval = min(minval,min(p.data{i}.(daq).adc.data(:)));
+    maxval = max(maxval,max(p.data{i}.(daq).adc.data(:)));
+end
 for i=1:6
     subplot(2,6,i);
-    plot(p.data{i}.datapixx.adc.data(1,:),p.data{i}.datapixx.adc.data(2,:));
-    axis([-0.5 5.5 -0.5 5.5]);
+    plot(p.data{i}.(daq).adc.data(1,:),p.data{i}.(daq).adc.data(2,:));
+    axis([minval maxval minval maxval]);
     grid on;
     axis square;
-    xlabel('ADC0 (V)');
-    ylabel('ADC1 (V)');
+    xlabel('ADC0');
+    ylabel('ADC1');
     title(lab{i});
 end
 
@@ -29,14 +39,14 @@ end
 ix = 4001:9000;
 
 %  Extract center (0,0)
-horizontalOffset = mean(p.data{1}.datapixx.adc.data(1,ix));
-verticalOffset = mean(p.data{1}.datapixx.adc.data(2,ix));
+horizontalOffset = mean(p.data{1}.(daq).adc.data(1,ix));
+verticalOffset = mean(p.data{1}.(daq).adc.data(2,ix));
 
 %  Bounds
-left = mean(p.data{2}.datapixx.adc.data(1,ix));
-right = mean(p.data{3}.datapixx.adc.data(1,ix));
-up = mean(p.data{4}.datapixx.adc.data(2,ix));
-down = mean(p.data{5}.datapixx.adc.data(2,ix));
+left = mean(p.data{2}.(daq).adc.data(1,ix));
+right = mean(p.data{3}.(daq).adc.data(1,ix));
+up = mean(p.data{4}.(daq).adc.data(2,ix));
+down = mean(p.data{5}.(daq).adc.data(2,ix));
 
 horizontalGain = 1/min(abs(left-horizontalOffset),abs(right-horizontalOffset));
 verticalGain = 1/min(abs(up-verticalOffset),abs(down-verticalOffset));
@@ -51,7 +61,7 @@ save(filename,'-struct','analogStickCalibration');
 
 
 subplot(2,2,3);
-plot(min(1,max(-1,horizontalGain*(p.data{i}.datapixx.adc.data(1,:)-horizontalOffset))),min(1,max(-1,verticalGain*(p.data{i}.datapixx.adc.data(2,:)-verticalOffset))));
+plot(min(1,max(-1,horizontalGain*(p.data{i}.(daq).adc.data(1,:)-horizontalOffset))),min(1,max(-1,verticalGain*(p.data{i}.(daq).adc.data(2,:)-verticalOffset))));
 axis([-1.25 1.25 -1.25 1.25]);
 grid on;
 axis square;
@@ -61,8 +71,8 @@ title(lab{i});
 
 subplot(2,2,4);
 
-plot(0.5*1920*min(1,max(-1,horizontalGain*(p.data{i}.datapixx.adc.data(1,:)-horizontalOffset)))+959.5,0.5*1080*min(1,max(-1,verticalGain*(p.data{i}.datapixx.adc.data(2,:)-verticalOffset)))+539.5);
-axis([0 1920 0 1080]);
+plot(0.5*p.trial.display.pWidth*min(1,max(-1,horizontalGain*(p.data{i}.(daq).adc.data(1,:)-horizontalOffset)))+959.5,0.5*p.trial.display.pHeight*min(1,max(-1,verticalGain*(p.data{i}.(daq).adc.data(2,:)-verticalOffset)))+539.5);
+axis([0 p.trial.display.pWidth 0 p.trial.display.pHeight]);
 grid on;
 axis equal;
 axis tight;
