@@ -41,8 +41,8 @@ S = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 nSymbols = size(S.symbolCodes,1);
 
 %rewardedResponses = {'left','center','right'};
-%rewardedResponses = {'left', 'left', 'center', 'right', 'right'};
-rewardedResponses = {'center'};
+rewardedResponses = {'left', 'left', 'center', 'right', 'right'};
+%rewardedResponses = {'center'};
 
 p.functionHandles.sequences = S;
 
