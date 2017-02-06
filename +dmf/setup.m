@@ -41,8 +41,8 @@ S = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 nSymbols = size(S.symbolCodes,1);
 
 %rewardedResponses = {'left','center','right'};
-rewardedResponses = {'left', 'left', 'center', 'right', 'right'};
-%rewardedResponses = {'center'};
+%rewardedResponses = {'left', 'left', 'center', 'right', 'right'};
+rewardedResponses = {'center'};
 
 p.functionHandles.sequences = S;
 
@@ -67,11 +67,10 @@ p.trial.pldaps.finish = length(p.conditions);
 %  Initialize performance tracking
 p.functionHandles.performance = dmf.performanceTracking({'left','center','right'});
 
-
 %  Geometry of stimuli
 p.functionHandles.geometry.symbolDisplacement = 350;
 p.functionHandles.geometry.symbolRadius = 150;
-p.functionHandles.geometry.center = [959.5 539.5];
+p.functionHandles.geometry.center = p.trial.display.ctr(1:2);
 p.functionHandles.geometry.symbolCenters.left = [p.functionHandles.geometry.center(1)-p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
 p.functionHandles.geometry.symbolCenters.center = [p.functionHandles.geometry.center(1) p.functionHandles.geometry.center(2)];
 p.functionHandles.geometry.symbolCenters.right = [p.functionHandles.geometry.center(1)+p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];

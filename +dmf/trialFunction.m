@@ -28,8 +28,10 @@ switch state
         %  Now put some windows in
         centerWindow = p.functionHandles.geometry.symbolDisplacement / p.functionHandles.analogStickObj.pWidth;
         p.functionHandles.analogStickWindowManager.addWindow('neutral',[-centerWindow -0.5 centerWindow 0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-centerWindow -1 centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('center',[-centerWindow -1 centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
+         p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
+%         p.functionHandles.analogStickWindowManager.addWindow('engaged',[-centerWindow -1 centerWindow -0.5]);
+%         p.functionHandles.analogStickWindowManager.addWindow('center',[-centerWindow -1 centerWindow -0.5]);
         p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -centerWindow -0.5]);
         p.functionHandles.analogStickWindowManager.addWindow('right',[centerWindow -1 1 -0.5]);
         
@@ -47,6 +49,17 @@ switch state
         fprintf(1,'****************************************************************\n');
         fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.symbolTextures));
         fprintf(1,'****************************************************************\n');
+        
+        %  If this is the mini-rig then prepare to use the rewardManager
+        %  Initialize reward management if this is the console
+        if(isField(p.trial,'a2duino') && p.trial.a2duino.use)
+            fprintf(1,'****************************************************************\n');
+            fprintf(1,'Appears to be using the a2duino DAQ.  Initialize rewardManager\n');
+            fprintf(1,'****************************************************************\n');
+            p.functionHandles.rewardManagerObj = a2duino.rewardManager(p.functionHandles.a2duinoObj);
+        end
+        
+        
         
     case p.trial.pldaps.trialStates.trialSetup
         %  trialSetup--this is where we would perform any steps that needed
@@ -114,6 +127,15 @@ switch state
         p.functionHandles.performance.output;
         fprintf('\n');
         
+        %  Check if we have hit a termination condition
+        if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
+            p.functionHandles.rewardManagerObj.checkRewardStatus;
+            if(p.functionHandles.rewardManagerObj.releaseFailed)
+                fprintf('We are out of pellets.\n');
+                p.trial.pldaps.quit = 2;
+            end
+        end
+        
         %         p.functionHandles.nTotalTrials = p.functionHandles.nTotalTrials + 1;
         %         p.functionHandles.nCompletedTrials = p.functionHandles.nCompletedTrials + p.functionHandles.stateControl.trialCompleted;
         %
@@ -175,13 +197,13 @@ switch state
         if(p.functionHandles.showWarning)
             color = [1 0 0];
         elseif(p.functionHandles.showEngage)
-            color = [0 1 0];            
+            color = [0 1 0];
         else
             color = [0 0 0];
         end
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
         screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);
-        p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,'color',color);                
+        p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,'color',color);
         
         %  For now I don't think I need to make this customizable
         %         center = p.functionHandles.geometry.center;
@@ -372,7 +394,7 @@ switch state
                     fprintf('\tMonkey released analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'warning';
                 end
-        
+                
                 
             case 'symbols'
                 
@@ -491,9 +513,25 @@ switch state
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.rewardDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
-                    pds.behavior.reward.give(p,p.functionHandles.reward);
+                    
+                    %  This section for a2duino managed reward
+                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
+                        p.functionHandles.rewardManagerObj.giveReward('pellet');
+                    else
+                        pds.behavior.reward.give(p,p.functionHandles.reward);
+                    end
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
-                    p.trial.flagNextTrial = true;
+                    
+                    %  Check to make sure the reward is not currently in
+                    %  progress (only relevant for pellets)
+                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
+                        p.functionHandles.rewardManagerObj.checkRewardStatus;
+                        if(~p.functionHandles.rewardManagerObj.releaseInProgress)
+                            p.trial.flagNextTrial = true;
+                        end
+                    else
+                        p.trial.flagNextTrial = true;
+                    end
                 end
                 
             case 'error'
