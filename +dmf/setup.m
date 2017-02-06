@@ -8,6 +8,9 @@ function p = setup(p)
 %  Set trial master function
 p.trial.pldaps.trialFunction = 'dmf.trialFunction';
 
+%  Set subject dependent parameters
+dmf.adjustableParameters(p);
+
 %  Get default colors and put the default bit names
 defaultColors(p);
 defaultBitNames(p);
@@ -19,9 +22,9 @@ p.trial.stimulus.cursorW = 8;   % cursor width in pixels (for console display)
 %  Custom colors that I have defined
 LovejoyDefaultColors(p);
 
-%  Trial duration information--he'll have 2 minutes to figure it out per
+%  Trial duration information--he'll have 5 minutes to figure it out per
 %  trial
-p.trial.pldaps.maxTrialLength = 2*60;
+p.trial.pldaps.maxTrialLength = 5*60;
 p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
 
 %
@@ -40,20 +43,21 @@ shapes = {'triangle','diamond','pentagon'};
 S = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 nSymbols = size(S.symbolCodes,1);
 
-%rewardedResponses = {'left','center','right'};
-%rewardedResponses = {'left', 'left', 'center', 'right', 'right'};
-rewardedResponses = {'center'};
-
+p.functionHandles.rewardedResponses = {'left','center','right'};
 p.functionHandles.sequences = S;
 
-c = cell(nSymbols*length(rewardedResponses),1);
+if(~isfield(p.functionHandles,'includedResponses'))
+    p.functionHandles.includedResponses = p.functionHandles.rewardedResponses;
+end
+
+c = cell(nSymbols*length(p.functionHandles.includedResponses),1);
 for i=1:nSymbols
-    for j=1:length(rewardedResponses)
+    for j=1:length(p.functionHandles.includedResponses)
         c{i+(j-1)*nSymbols}.symbolIndex = i;
         c{i+(j-1)*nSymbols}.symbol.color = S.features.colors{S.symbolCodes(i,1)};
         c{i+(j-1)*nSymbols}.symbol.pattern = S.features.patterns{S.symbolCodes(i,2)};
         c{i+(j-1)*nSymbols}.symbol.shape = S.features.shapes{S.symbolCodes(i,3)};
-        c{i+(j-1)*nSymbols}.rewardedResponse = rewardedResponses{j};
+        c{i+(j-1)*nSymbols}.rewardedResponse = p.functionHandles.includedResponses{j};
     end
 end
 c = repmat(c,20,1);   
@@ -65,7 +69,7 @@ p.conditions = c;
 p.trial.pldaps.finish = length(p.conditions);
 
 %  Initialize performance tracking
-p.functionHandles.performance = dmf.performanceTracking({'left','center','right'});
+p.functionHandles.performance = dmf.performanceTracking(p.functionHandles.rewardedResponses);
 
 %  Geometry of stimuli
 p.functionHandles.geometry.symbolDisplacement = 350;

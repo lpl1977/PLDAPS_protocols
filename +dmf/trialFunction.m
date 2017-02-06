@@ -28,26 +28,33 @@ switch state
         %  Now put some windows in
         centerWindow = p.functionHandles.geometry.symbolDisplacement / p.functionHandles.analogStickObj.pWidth;
         p.functionHandles.analogStickWindowManager.addWindow('neutral',[-centerWindow -0.5 centerWindow 0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
-         p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
-%         p.functionHandles.analogStickWindowManager.addWindow('engaged',[-centerWindow -1 centerWindow -0.5]);
-%         p.functionHandles.analogStickWindowManager.addWindow('center',[-centerWindow -1 centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-centerWindow -1 centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('center',[-centerWindow -1 centerWindow -0.5]);
         p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -centerWindow -0.5]);
         p.functionHandles.analogStickWindowManager.addWindow('right',[centerWindow -1 1 -0.5]);
         
-        fprintf(1,'****************************************************************\n');
-        fprintf('Created windows for analog stick:\n');
-        for i=1:length(p.functionHandles.analogStickWindowManager.windowList)
-            disp(p.functionHandles.analogStickWindowManager.windows.(p.functionHandles.analogStickWindowManager.windowList{i}));
-        end
-        fprintf(1,'****************************************************************\n');
-        
+        %  Make custom adjustments based on subject
+        dmf.adjustableParameters(p,state);
+
         %  Generate symbol textures at beginning of experiment (we can only
         %  do this once we have the display pointer, and we only need do it
         %  this one time)
         p.functionHandles.symbolTextures = dmf.generateSymbolTextures(p);
         fprintf(1,'****************************************************************\n');
         fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.symbolTextures));
+        fprintf(1,'****************************************************************\n');
+
+        
+        fprintf(1,'****************************************************************\n');
+        fprintf('Created windows for analog stick:\n');
+        for i=1:length(p.functionHandles.analogStickWindowManager.windowList)
+            fprintf('\t%10s:  [%6.3f %6.3f %6.3f %6.3f] ',p.functionHandles.analogStickWindowManager.windowList{i},p.functionHandles.analogStickWindowManager.windowRect{i});
+            if(p.functionHandles.analogStickWindowManager.windowEnabled(i))
+                fprintf('(enabled)\n');
+            else
+                fprintf('(disabled)\n');
+            end
+        end
         fprintf(1,'****************************************************************\n');
         
         %  If this is the mini-rig then prepare to use the rewardManager
@@ -58,8 +65,6 @@ switch state
             fprintf(1,'****************************************************************\n');
             p.functionHandles.rewardManagerObj = a2duino.rewardManager(p.functionHandles.a2duinoObj);
         end
-        
-        
         
     case p.trial.pldaps.trialStates.trialSetup
         %  trialSetup--this is where we would perform any steps that needed
@@ -90,7 +95,7 @@ switch state
         p.functionHandles.showEngage = false;
         
         %  Set any adjustable parameters
-        dmf.adjustableParameters(p);
+        dmf.adjustableParameters(p,state,'windows');
         
         %  Echo trial specs to screen
         fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
