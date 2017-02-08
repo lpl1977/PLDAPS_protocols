@@ -21,19 +21,20 @@ switch state
         
         %  By now the analog stick object should have been created, so
         %  let's adjust for screen geometry
-        p.functionHandles.geometry.horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
         p.functionHandles.analogStickObj.pWidth = p.trial.display.pWidth;
         p.functionHandles.analogStickObj.pHeight = 0;
         
-        %  Now put some windows in
-        centerWindow = p.functionHandles.geometry.symbolDisplacement / p.functionHandles.analogStickObj.pWidth;
-        p.functionHandles.analogStickWindowManager.addWindow('neutral',[-centerWindow -0.5 centerWindow 0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-centerWindow -1 centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('center',[-centerWindow -1 centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('right',[centerWindow -1 1 -0.5]);
+        %  Now put some windows in; these are the defaults and can be
+        %  modified later
+        p.functionHandles.geometry.horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
+        p.functionHandles.geometry.centerWindow = p.functionHandles.geometry.symbolDisplacement / p.functionHandles.analogStickObj.pWidth;
+        p.functionHandles.analogStickWindowManager.addWindow('neutral',[-p.functionHandles.geometry.centerWindow -0.5 p.functionHandles.geometry.centerWindow 0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-p.functionHandles.geometry.centerWindow -1 p.functionHandles.geometry.centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('center',[-p.functionHandles.geometry.centerWindow -1 p.functionHandles.geometry.centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -p.functionHandles.geometry.centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('right',[p.functionHandles.geometry.centerWindow -1 1 -0.5]);
         
-        %  Make custom adjustments based on subject
+        %  Make last minute custom adjustments based on subject
         dmf.adjustableParameters(p,state);
 
         %  Generate symbol textures at beginning of experiment (we can only
@@ -43,18 +44,10 @@ switch state
         fprintf(1,'****************************************************************\n');
         fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.symbolTextures));
         fprintf(1,'****************************************************************\n');
-
         
         fprintf(1,'****************************************************************\n');
-        fprintf('Created windows for analog stick:\n');
-        for i=1:length(p.functionHandles.analogStickWindowManager.windowList)
-            fprintf('\t%10s:  [%6.3f %6.3f %6.3f %6.3f] ',p.functionHandles.analogStickWindowManager.windowList{i},p.functionHandles.analogStickWindowManager.windowRect{i});
-            if(p.functionHandles.analogStickWindowManager.windowEnabled(i))
-                fprintf('(enabled)\n');
-            else
-                fprintf('(disabled)\n');
-            end
-        end
+        fprintf('Windows for analog stick:\n');
+        p.functionHandles.analogStickWindowManager.displayWindows;
         fprintf(1,'****************************************************************\n');
         
         %  If this is the mini-rig then prepare to use the rewardManager
@@ -93,6 +86,7 @@ switch state
         p.functionHandles.showSymbols = false;
         p.functionHandles.showWarning = false;
         p.functionHandles.showEngage = false;
+        p.functionHandles.showHold = false;
         
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);
@@ -207,15 +201,17 @@ switch state
         %  Draw the cursor (there is an internal check for cursor
         %  visibility).
         if(p.functionHandles.showWarning)
-            color = [1 0 0];
+            fillColor = [1 0 0];
         elseif(p.functionHandles.showEngage)
-            color = [0 1 0];
+            fillColor = [0 1 0];
+        elseif(p.functionHandles.showHold)
+            fillColor = [1 1 1];
         else
-            color = [0 0 0];
+            fillColor = [0 0 0];
         end
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
         screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);
-        p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,'color',color);
+        p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,'fillColor',fillColor);
         
         %  For now I don't think I need to make this customizable
         %         center = p.functionHandles.geometry.center;
@@ -385,6 +381,7 @@ switch state
                     p.functionHandles.showEngage = true;
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     fprintf('\tAnalog stick engaged after %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                    p.functionHandles.showHold = true;
                     p.functionHandles.showEngage = false;
                     p.functionHandles.stateVariables.nextState = 'hold';
                 end
@@ -403,7 +400,7 @@ switch state
                     fprintf('\tMonkey kept analog stick engaged for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'symbols';
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                    fprintf('\tMonkey released analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                    fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'warning';
                 end
                 
@@ -418,9 +415,10 @@ switch state
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
-                    p.functionHandles.analogStickCursorObj.visible = true;
+ %                   p.functionHandles.analogStickCursorObj.visible = true;
                     p.functionHandles.showSymbols = true;
                 else
+                    p.functionHandles.showHold = false;                    
                     p.functionHandles.stateVariables.nextState = 'response';
                 end
                 
