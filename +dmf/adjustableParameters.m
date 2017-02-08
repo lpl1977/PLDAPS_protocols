@@ -18,6 +18,25 @@ if(nargin==1)
             p.functionHandles.includedResponses = {'center'};
         case 'debug'
             p.functionHandles.includedResponses = {'center'};
+    end    
+    
+    %  Reward
+    p.functionHandles.reward = 0.5;
+    
+    %  Timing
+    p.functionHandles.timing.responseDuration = 10;
+    p.functionHandles.timing.rewardDuration = 0.7;
+    p.functionHandles.timing.errorDuration = p.functionHandles.timing.rewardDuration;
+    p.functionHandles.timing.errorPenaltyDuration = 2;
+    p.functionHandles.timing.penaltyDuration = 5;
+    p.functionHandles.timing.holdDelay = 0;
+    
+    switch lower(p.trial.session.subject)
+        case 'murray'
+            p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
+        case 'meatball'
+        case 'splinter'
+            p.functionHandles.timing.holdDelay = min(4,0 + exprnd(0.5));
     end
 else
     
@@ -25,6 +44,15 @@ else
     state = varargin{1};
     switch state
         case p.trial.pldaps.trialStates.experimentPostOpenScreen
+            
+            %  Adjust windows
+            
+%            centerWindow = p.functionHandles.geometry.symbolDisplacement / p.functionHandles.analogStickObj.pWidth;
+%             p.functionHandles.analogStickWindowManager.addWindow('neutral',[-centerWindow -0.5 centerWindow 0.5]);
+%             p.functionHandles.analogStickWindowManager.addWindow('engaged',[-centerWindow -1 centerWindow -0.5]);
+%             p.functionHandles.analogStickWindowManager.addWindow('center',[-centerWindow -1 centerWindow -0.5]);
+%             p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -centerWindow -0.5]);
+%             p.functionHandles.analogStickWindowManager.addWindow('right',[centerWindow -1 1 -0.5]);
             switch lower(p.trial.session.subject)
                 case 'murray'
                 case 'meatball'
@@ -33,10 +61,10 @@ else
 %                     p.functionHandles.analogStickWindowManager.disableWindow('left');
 %                     p.functionHandles.analogStickWindowManager.disableWindow('right');
                 case 'splinter'
-                    p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
-                    p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
-                    p.functionHandles.analogStickWindowManager.disableWindow('left');
-                    p.functionHandles.analogStickWindowManager.disableWindow('right');
+%                    p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
+%                    p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
+%                    p.functionHandles.analogStickWindowManager.disableWindow('left');
+%                    p.functionHandles.analogStickWindowManager.disableWindow('right');
                 case 'debug'
                     p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
                     p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
