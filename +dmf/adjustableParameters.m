@@ -19,25 +19,6 @@ if(nargin==1)
         case 'debug'
             p.functionHandles.includedResponses = {'center'};
     end
-    
-    %  Reward
-    p.functionHandles.reward = 0.5;
-    
-    %  Timing
-    p.functionHandles.timing.responseDuration = 10;
-    p.functionHandles.timing.rewardDuration = 0.7;
-    p.functionHandles.timing.errorDuration = p.functionHandles.timing.rewardDuration;
-    p.functionHandles.timing.errorPenaltyDuration = 2;
-    p.functionHandles.timing.penaltyDuration = 5;
-    
-    switch lower(p.trial.session.subject)
-        case 'murray'
-            p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
-        case 'meatball'
-            p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
-        case 'splinter'
-            p.functionHandles.timing.holdDelay = min(4,0 + exprnd(0.5));
-    end
 else
     
     %  State dependent steps
@@ -80,7 +61,9 @@ else
                 case {'murray','debug'}
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'meatball'
-                    p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
+                    p.functionHandles.timing.holdDelay = min(4,0 + exprnd(0.25));
+                    %p.functionHandles.timing.holdDelay = 0; 
+                    %p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'splinter'
                     p.functionHandles.timing.holdDelay = min(4,0 + exprnd(0.5));
             end
