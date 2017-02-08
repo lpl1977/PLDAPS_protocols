@@ -13,6 +13,8 @@ classdef outcome < handle
         abortState
         abortTime
         abortMessage
+        trialInterrupted = false;
+        interruptMessage
     end
     
     properties (Dependent)
@@ -42,6 +44,14 @@ classdef outcome < handle
             end
         end
         
+        %  Trial interrupts
+        function obj = recordInterrupt(obj,varargin)
+            obj.trialInterrupted = true;
+            if(nargin>1)
+                obj.interruptMessage = varargin{1};
+            end
+        end
+        
         function outcome = get.correct(obj)
             if(isempty(obj.response))
                 outcome = [];
@@ -55,6 +65,8 @@ classdef outcome < handle
                 output.abortState = obj.abortState;
                 output.abortTime = obj.abortTime;
                 output.abortMessage = obj.abortMessage;
+            elseif(obj.trialInterrupted)
+                output.interruptMessage = obj.interruptMessage;
             else
                 output.response = obj.response;
                 output.rewardedResponse = obj.rewardedResponse;

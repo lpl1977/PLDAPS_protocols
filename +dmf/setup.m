@@ -8,9 +8,6 @@ function p = setup(p)
 %  Set trial master function
 p.trial.pldaps.trialFunction = 'dmf.trialFunction';
 
-%  Set subject dependent parameters
-dmf.adjustableParameters(p);
-
 %  Get default colors and put the default bit names
 defaultColors(p);
 defaultBitNames(p);
@@ -26,6 +23,23 @@ LovejoyDefaultColors(p);
 %  trial
 p.trial.pldaps.maxTrialLength = 5*60;
 p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
+
+%  Geometry of stimuli
+p.functionHandles.geometry.symbolDisplacement = 350;
+p.functionHandles.geometry.symbolRadius = 150;
+p.functionHandles.geometry.center = p.trial.display.ctr(1:2);
+p.functionHandles.geometry.symbolCenters.left = [p.functionHandles.geometry.center(1)-p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
+p.functionHandles.geometry.symbolCenters.center = [p.functionHandles.geometry.center(1) p.functionHandles.geometry.center(2)];
+p.functionHandles.geometry.symbolCenters.right = [p.functionHandles.geometry.center(1)+p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
+
+%  Features
+p.functionHandles.features.symbolRadius = p.functionHandles.geometry.symbolRadius;
+p.functionHandles.features.nSpatialCycles = 16;
+p.functionHandles.features.nThetaCycles = 8;
+p.functionHandles.features.bgColor = p.trial.display.bgColor;
+
+%  Set subject dependent parameters
+dmf.adjustableParameters(p);
 
 %
 %  CONDITIONS
@@ -61,29 +75,12 @@ for i=1:nSymbols
     end
 end
 c = repmat(c,20,1);   
-
-
-c = Shuffle(c);
-
-p.conditions = c; 
+p.conditions = Shuffle(c); 
 p.trial.pldaps.finish = length(p.conditions);
 
 %  Initialize performance tracking
 p.functionHandles.performance = dmf.performanceTracking(p.functionHandles.rewardedResponses);
 
-%  Geometry of stimuli
-p.functionHandles.geometry.symbolDisplacement = 350;
-p.functionHandles.geometry.symbolRadius = 150;
-p.functionHandles.geometry.center = p.trial.display.ctr(1:2);
-p.functionHandles.geometry.symbolCenters.left = [p.functionHandles.geometry.center(1)-p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
-p.functionHandles.geometry.symbolCenters.center = [p.functionHandles.geometry.center(1) p.functionHandles.geometry.center(2)];
-p.functionHandles.geometry.symbolCenters.right = [p.functionHandles.geometry.center(1)+p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
-
-%  Features
-p.functionHandles.features.symbolRadius = p.functionHandles.geometry.symbolRadius;
-p.functionHandles.features.nSpatialCycles = 16;
-p.functionHandles.features.nThetaCycles = 8;
-p.functionHandles.features.bgColor = p.trial.display.bgColor;
 
 % leftColorMatchTrials{i}.symbol.(pos{j}).color = leftColorSequences{i,j}{1};
 % leftColorMatchTrials{i}.symbol.(pos{j}).pattern = leftColorSequences{i,j}{2};

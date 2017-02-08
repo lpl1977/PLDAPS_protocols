@@ -44,25 +44,27 @@ classdef performanceTracking < handle
         
         %  Update performance tracking
         function obj = update(obj,outcome)
-            obj.numTrialsAttempted.total = obj.numTrialsAttempted.total + 1;
-            obj.numTrialsAttempted.(outcome.rewardedResponse) = obj.numTrialsAttempted.(outcome.rewardedResponse) + 1;
-            if(~outcome.trialAborted)
-                obj.numTrialsCompleted.total = obj.numTrialsCompleted.total+1;
-                obj.numTrialsCompleted.(outcome.rewardedResponse) = obj.numTrialsCompleted.(outcome.rewardedResponse)+1;
-                obj.numCorrect.total = obj.numCorrect.total + outcome.correct;
-                obj.numCorrect.(outcome.rewardedResponse) = obj.numCorrect.(outcome.rewardedResponse)+outcome.correct;
-                if(~isempty(outcome.response))
-                    obj.responseFrequency.total.(outcome.response) = obj.responseFrequency.total.(outcome.response) + 1;
-                    obj.responseFrequency.(outcome.rewardedResponse).(outcome.response) = obj.responseFrequency.(outcome.rewardedResponse).(outcome.response)+1;
-                end
-            else
-                ix = strcmp(outcome.abortMessage,obj.abortMessages);
-                if(any(ix))
-                    obj.numAborts(ix) = obj.numAborts(ix)+1;
+            if(~outcome.trialInterrupted)
+                obj.numTrialsAttempted.total = obj.numTrialsAttempted.total + 1;
+                obj.numTrialsAttempted.(outcome.rewardedResponse) = obj.numTrialsAttempted.(outcome.rewardedResponse) + 1;
+                if(~outcome.trialAborted)
+                    obj.numTrialsCompleted.total = obj.numTrialsCompleted.total+1;
+                    obj.numTrialsCompleted.(outcome.rewardedResponse) = obj.numTrialsCompleted.(outcome.rewardedResponse)+1;
+                    obj.numCorrect.total = obj.numCorrect.total + outcome.correct;
+                    obj.numCorrect.(outcome.rewardedResponse) = obj.numCorrect.(outcome.rewardedResponse)+outcome.correct;
+                    if(~isempty(outcome.response))
+                        obj.responseFrequency.total.(outcome.response) = obj.responseFrequency.total.(outcome.response) + 1;
+                        obj.responseFrequency.(outcome.rewardedResponse).(outcome.response) = obj.responseFrequency.(outcome.rewardedResponse).(outcome.response)+1;
+                    end
                 else
-                    obj.abortMessages{end+1} = outcome.abortMessage;
-                    obj.numAborts(end+1) = 1;
-                    obj.messageLength = max(obj.messageLength,length(outcome.abortMessage));
+                    ix = strcmp(outcome.abortMessage,obj.abortMessages);
+                    if(any(ix))
+                        obj.numAborts(ix) = obj.numAborts(ix)+1;
+                    else
+                        obj.abortMessages{end+1} = outcome.abortMessage;
+                        obj.numAborts(end+1) = 1;
+                        obj.messageLength = max(obj.messageLength,length(outcome.abortMessage));
+                    end
                 end
             end
         end

@@ -95,7 +95,7 @@ switch state
         p.functionHandles.showEngage = false;
         
         %  Set any adjustable parameters
-        dmf.adjustableParameters(p,state,'windows');
+        dmf.adjustableParameters(p,state);
         
         %  Echo trial specs to screen
         fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
@@ -122,6 +122,13 @@ switch state
         
         %  Capture data for this trial
         p.trial.trialRecord.stateTransitionLog = p.functionHandles.stateVariables.transitionLog;
+        if(p.trial.pldaps.quit~=0)
+            if(p.trial.pldaps.quit~=2)
+                p.functionHandles.trialOutcome.recordInterrupt('trialPaused');
+            else
+                p.functionHandles.trialOutcome.recordInterrupt('pldapsQuit');
+            end
+        end
         p.trial.trialRecord.outcome = p.functionHandles.trialOutcome.commit;
         fprintf('\n');
         
