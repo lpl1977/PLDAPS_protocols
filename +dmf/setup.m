@@ -54,27 +54,31 @@ colors = {'blue','scarlet','yellow'};
 patterns = {'waffle','concentricCircles','spiral'};
 shapes = {'triangle','diamond','pentagon'};
 
-S = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
-nSymbols = size(S.symbolCodes,1);
+p.functionHandles.sequenceObj = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
+
+[~,colorSequenceCodes.left] = p.functionHandles.sequenceObj.selector('100');
+[~,colorSequenceCodes.right] = p.functionHandles.sequenceObj.selector('300');
+[~,colorSequenceCodes.center] = p.functionHandles.sequenceObj.selector('000');
+
+nSequences = zeros(length(p.functionHandles.stimConfig),1);
+for i=1:length(p.functionHandles.stimConfig)
+    nSequences(i) = size(colorSequenceCodes.(p.functionHandles.stimConfig(i).response),1);
+end
 
 p.functionHandles.rewardedResponses = {'left','center','right'};
-p.functionHandles.sequences = S;
 
 if(~isfield(p.functionHandles,'includedResponses'))
     p.functionHandles.includedResponses = p.functionHandles.rewardedResponses;
 end
 
-c = cell(nSymbols*length(p.functionHandles.includedResponses),1);
-for i=1:nSymbols
-    for j=1:length(p.functionHandles.includedResponses)
-        c{i+(j-1)*nSymbols}.symbolIndex = i;
-        c{i+(j-1)*nSymbols}.symbol.color = S.features.colors{S.symbolCodes(i,1)};
-        c{i+(j-1)*nSymbols}.symbol.pattern = S.features.patterns{S.symbolCodes(i,2)};
-        c{i+(j-1)*nSymbols}.symbol.shape = S.features.shapes{S.symbolCodes(i,3)};
-        c{i+(j-1)*nSymbols}.rewardedResponse = p.functionHandles.includedResponses{j};
+c = cell(sum(nSequences),1);
+for i=1:length(p.functionHandles.stimConfig)
+    for j=1:nSequences(i)
+        c{sum(nSequences(1:i-1))+j}.symbolIndices = colorSequenceCodes.(p.functionHandles.stimConfig(i).response)(j,:);
+        c{sum(nSequences(1:i-1))+j}.rewardedResponse = p.functionHandles.stimConfig(i).response;
+        c{sum(nSequences(1:i-1))+j}.displayPositions = p.functionHandles.stimConfig(i).positions;
     end
 end
-c = repmat(c,20,1);   
 p.conditions = Shuffle(c); 
 p.trial.pldaps.finish = length(p.conditions);
 
