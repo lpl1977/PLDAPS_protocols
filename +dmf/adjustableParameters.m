@@ -61,7 +61,7 @@ else
                 case {'murray','debug'}
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'meatball'
-                    p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
+                    p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0));
                     %p.functionHandles.timing.holdDelay = 0; 
                     %p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'splinter'
