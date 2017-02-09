@@ -16,7 +16,7 @@ if(nargin==1)
         case 'meatball'
             p.functionHandles.includedResponses = {'left','center','right'};
         case 'splinter'
-            p.functionHandles.includedResponses = {'center'};
+            p.functionHandles.includedResponses = {'left','center','right'};
         case 'debug'
             p.functionHandles.includedResponses = {'center'};
     end
@@ -31,20 +31,12 @@ else
             switch lower(p.trial.session.subject)
                 case 'murray'
                 case 'meatball'
-                    %                     p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
+                case 'splinter'
+                    %                    p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
                     %                     p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
                     %                     p.functionHandles.analogStickWindowManager.disableWindow('left');
                     %                     p.functionHandles.analogStickWindowManager.disableWindow('right');
-                case 'splinter'
-                    %                    p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
-                    p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
-                    p.functionHandles.analogStickWindowManager.disableWindow('left');
-                    p.functionHandles.analogStickWindowManager.disableWindow('right');
                 case 'debug'
-%                     p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
-%                     p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
-%                     p.functionHandles.analogStickWindowManager.disableWindow('left');
-%                     p.functionHandles.analogStickWindowManager.disableWindow('right');
             end
         case p.trial.pldaps.trialStates.trialSetup
             
@@ -61,16 +53,10 @@ else
             switch lower(p.trial.session.subject)
                 case {'murray','debug'}
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
-                    p.functionHandles.conditionalRewardRate = 1;
                 case 'meatball'
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
-                    p.functionHandles.conditionalRewardRate = 1;
-                    %p.functionHandles.timing.holdDelay = 0; 
-                    %p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'splinter'
                     p.functionHandles.timing.holdDelay = min(4,0.25 + exprnd(0.5));
-                    
-                    p.functionHandles.conditionalRewardRate = 0.8;
             end
     end
 end
