@@ -56,7 +56,7 @@ else
                 case 'meatball'
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'splinter'
-                    p.functionHandles.timing.holdDelay = min(4,0.25 + exprnd(0.5));
+                    p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
             end
     end
 end
