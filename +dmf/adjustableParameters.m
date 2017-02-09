@@ -8,7 +8,8 @@ function p = adjustableParameters(p,varargin)
 
 if(nargin==1)
     
-    %  Non state dependent steps
+    %  Non state dependent steps--could be called in the experiment setup
+    %  file
     switch lower(p.trial.session.subject)
         case 'murray'
             p.functionHandles.includedResponses = {'left','center','right'};
@@ -60,12 +61,16 @@ else
             switch lower(p.trial.session.subject)
                 case {'murray','debug'}
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
+                    p.functionHandles.conditionalRewardRate = 1;
                 case 'meatball'
-                    p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0));
+                    p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
+                    p.functionHandles.conditionalRewardRate = 1;
                     %p.functionHandles.timing.holdDelay = 0; 
                     %p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'splinter'
-                    p.functionHandles.timing.holdDelay = min(4,0 + exprnd(0.5));
+                    p.functionHandles.timing.holdDelay = min(4,0.25 + exprnd(0.5));
+                    
+                    p.functionHandles.conditionalRewardRate = 0.8;
             end
     end
 end

@@ -88,6 +88,9 @@ switch state
         p.functionHandles.showEngage = false;
         p.functionHandles.showHold = false;
         
+        %  Determine if reward is available this trial
+        p.functionHandles.rewardAvailable = unifrnd(0,1) <= p.functionHandles.conditionalRewardRate;
+                    
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);
         
@@ -95,6 +98,7 @@ switch state
         fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
         fprintf('            Symbol:  %s %s %s\n',p.trial.condition.symbol.color,p.trial.condition.symbol.pattern,p.trial.condition.symbol.shape);
         fprintf(' Rewarded response:  %s\n',p.trial.condition.rewardedResponse);
+        fprintf('  Reward available:  %d\n',p.functionHandles.rewardAvailable);
         fprintf('\n');
         
         %         for pos = {'left','center','right'}
@@ -524,26 +528,33 @@ switch state
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.rewardDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                     
-                    %  This section for a2duino managed reward
-                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
-                        p.functionHandles.rewardManagerObj.giveReward('pellet');
-                    else
-                        pds.behavior.reward.give(p,p.functionHandles.reward);
+                    %  May not dispense reward on this trial...
+                    if(p.functionHandles.rewardAvailable)
+                        
+                        %  This section for a2duino managed reward
+                        if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
+                            p.functionHandles.rewardManagerObj.giveReward('pellet');
+                        else
+                            pds.behavior.reward.give(p,p.functionHandles.reward);
+                        end
                     end
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     
-                    %  Check to make sure the reward is not currently in
-                    %  progress (only relevant for pellets)
-                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
-                        p.functionHandles.rewardManagerObj.checkRewardStatus;
-                        if(~p.functionHandles.rewardManagerObj.releaseInProgress)
+                    %  May not have dispensed reward on this trial
+                    if(p.functionHandles.rewardAvailable)
+                        
+                        %  Check to make sure the reward is not currently in
+                        %  progress (only relevant for pellets)
+                        if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
+                            p.functionHandles.rewardManagerObj.checkRewardStatus;
+                            if(~p.functionHandles.rewardManagerObj.releaseInProgress)
+                                p.trial.flagNextTrial = true;
+                            end
+                        else
                             p.trial.flagNextTrial = true;
                         end
-                    else
-                        p.trial.flagNextTrial = true;
                     end
                 end
-                
             case 'error'
                 
                 %  STATE:  error
