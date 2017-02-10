@@ -14,7 +14,7 @@ if(nargin==1)
         case 'murray'
             p.functionHandles.includedResponses = {'left','center','right'};
         case 'meatball'
-            p.functionHandles.includedResponses = {'left','center','right'};
+            p.functionHandles.includedResponses = {'left','left','center','right','right'};
         case 'splinter'
             p.functionHandles.includedResponses = {'left','center','right'};
         case 'debug'
@@ -50,7 +50,7 @@ else
                 case {'murray','debug'}
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
                 case 'meatball'
-                    p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
+                    p.functionHandles.timing.holdDelay = min(4,0 + exprnd(0.25));
                 case 'splinter'
                     p.functionHandles.timing.holdDelay = min(4,0.5 + exprnd(0.5));
             end
