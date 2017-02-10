@@ -34,7 +34,7 @@ switch state
         p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -p.functionHandles.geometry.centerWindow -0.5]);
         p.functionHandles.analogStickWindowManager.addWindow('right',[p.functionHandles.geometry.centerWindow -1 1 -0.5]);
         
-        %  Make last minute custom adjustments based on subject
+        %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
 
         %  Generate symbol textures at beginning of experiment (we can only
@@ -51,10 +51,9 @@ switch state
         fprintf(1,'****************************************************************\n');
         
         %  If this is the mini-rig then prepare to use the rewardManager
-        %  Initialize reward management if this is the console
-        if(isField(p.trial,'a2duino') && p.trial.a2duino.use)
+        if(isField(p.trial,'a2duino') && p.trial.a2duino.useForReward)
             fprintf(1,'****************************************************************\n');
-            fprintf(1,'Appears to be using the a2duino DAQ.  Initialize rewardManager\n');
+            fprintf(1,'Using the a2duino DAQ.  Initialize rewardManager\n');
             fprintf(1,'****************************************************************\n');
             p.functionHandles.rewardManagerObj = a2duino.rewardManager(p.functionHandles.a2duinoObj);
         end

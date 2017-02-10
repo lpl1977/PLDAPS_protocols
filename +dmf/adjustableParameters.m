@@ -27,7 +27,7 @@ else
     switch state
         case p.trial.pldaps.trialStates.experimentPostOpenScreen
             
-            %  Adjust windows            
+            %  Here you could adjust windows           
             switch lower(p.trial.session.subject)
                 case 'murray'
                 case 'meatball'
