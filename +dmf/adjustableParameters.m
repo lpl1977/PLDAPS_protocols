@@ -32,10 +32,6 @@ else
                 case 'murray'
                 case 'meatball'
                 case 'splinter'
-                    %                    p.functionHandles.analogStickWindowManager.addWindow('engaged',[-1 -1 1 -0.5]);
-                    %                     p.functionHandles.analogStickWindowManager.addWindow('center',[-1 -1 1 -0.5]);
-                    %                     p.functionHandles.analogStickWindowManager.disableWindow('left');
-                    %                     p.functionHandles.analogStickWindowManager.disableWindow('right');
                 case 'debug'
             end
         case p.trial.pldaps.trialStates.trialSetup
