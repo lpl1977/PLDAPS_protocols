@@ -65,10 +65,8 @@ for i=1:length(p.functionHandles.stimConfig)
     nSequences(i) = size(colorSequenceCodes.(p.functionHandles.stimConfig(i).response),1);
 end
 
-p.functionHandles.rewardedResponses = {'left','center','right'};
-
 if(~isfield(p.functionHandles,'includedResponses'))
-    p.functionHandles.includedResponses = p.functionHandles.rewardedResponses;
+    p.functionHandles.includedResponses = unique(p.functionHandles.rewardedResponses);
 end
 
 c = cell(sum(nSequences),1);
@@ -76,6 +74,7 @@ for i=1:length(p.functionHandles.stimConfig)
     for j=1:nSequences(i)
         c{sum(nSequences(1:i-1))+j}.symbolIndices = colorSequenceCodes.(p.functionHandles.stimConfig(i).response)(j,:);
         c{sum(nSequences(1:i-1))+j}.rewardedResponse = p.functionHandles.stimConfig(i).response;
+        c{sum(nSequences(1:i-1))+j}.trialType = p.functionHandles.stimConfig(i).trialType;
         c{sum(nSequences(1:i-1))+j}.displayPositions = p.functionHandles.stimConfig(i).positions;
     end
 end
@@ -83,7 +82,7 @@ p.conditions = Shuffle(c);
 p.trial.pldaps.finish = length(p.conditions);
 
 %  Initialize performance tracking
-p.functionHandles.performance = dmf.performanceTracking(p.functionHandles.rewardedResponses);
+p.functionHandles.performance = dmf.performanceTracking(p.functionHandles.trialTypes,p.functionHandles.rewardedResponses);
 
 
 % leftColorMatchTrials{i}.symbol.(pos{j}).color = leftColorSequences{i,j}{1};

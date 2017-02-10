@@ -79,7 +79,7 @@ switch state
         p.functionHandles.stateVariables = stateControl('start');
         
         %  Initialize trial outcome object
-        p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.rewardedResponse);
+        p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.trialType,p.trial.condition.rewardedResponse);
         
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
@@ -87,18 +87,33 @@ switch state
         p.functionHandles.showWarning = false;
         p.functionHandles.showEngage = false;
         p.functionHandles.showHold = false;
-        
-        %  Determine if reward is available this trial
-        p.functionHandles.rewardAvailable = unifrnd(0,1) <= p.functionHandles.conditionalRewardRate;
-                    
+          
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);
         
+        %  Determine if reward is available this trial
+        p.functionHandles.rewardAvailable = unifrnd(0,1) <= p.functionHandles.conditionalRewardRate;
+                            
         %  Echo trial specs to screen
         fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
-        fprintf('            Symbol:  %s %s %s\n',p.trial.condition.symbol.color,p.trial.condition.symbol.pattern,p.trial.condition.symbol.shape);
-        fprintf(' Rewarded response:  %s\n',p.trial.condition.rewardedResponse);
-        fprintf('  Reward available:  %d\n',p.functionHandles.rewardAvailable);
+        fprintf('%20s:\n','Symbols');
+        for i=1:length(p.trial.condition.displayPositions)
+            fprintf('%20s:  ',p.trial.condition.displayPositions{i});            
+                switch p.trial.condition.displayPositions{i}
+                    case 'left'
+                        indx = 1;
+                    case 'center'
+                        indx = 2;
+                    case 'right'
+                        indx = 3;
+                end
+            fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(indx),1)});
+            fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(indx),2)});
+            fprintf('%s ',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(indx),3)});
+            fprintf('\n');
+        end
+        fprintf('%20s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
+        fprintf('%20s:  %s\n','Reward available',p.functionHandles.rewardAvailable);
         fprintf('\n');
         
         %         for pos = {'left','center','right'}
@@ -196,12 +211,20 @@ switch state
         %  if there is a call to a function calling Screen, put it here!
         
         if(p.functionHandles.showSymbols)
-            symbolCenter = p.functionHandles.geometry.symbolCenters.(p.trial.condition.rewardedResponse);
-            baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
-            centeredRect = CenterRectOnPoint(baseRect,symbolCenter(1),symbolCenter(2));
-            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndex),[],centeredRect);
+            for i=1:length(p.trial.condition.displayPositions)
+                symbolCenter = p.functionHandles.geometry.symbolCenters.(p.trial.condition.displayPositions{i});
+                baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
+                centeredRect = CenterRectOnPoint(baseRect,symbolCenter(1),symbolCenter(2));
+                switch p.trial.condition.displayPositions{i}
+                    case 'left'
+                        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(1)),[],centeredRect);
+                    case 'center'
+                        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(2)),[],centeredRect);
+                    case 'right'
+                        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(3)),[],centeredRect);
+                end
+            end
         end
-        
         %  Draw the cursor (there is an internal check for cursor
         %  visibility).
         if(p.functionHandles.showWarning)

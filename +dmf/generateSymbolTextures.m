@@ -11,8 +11,8 @@ nSpatialCycles = p.functionHandles.features.nSpatialCycles;
 nThetaCycles = p.functionHandles.features.nThetaCycles;
 bgColor = p.functionHandles.features.bgColor;
 
-symbolFeatures = p.functionHandles.sequences.features;
-symbolCodes = p.functionHandles.sequences.symbolCodes;
+symbolFeatures = p.functionHandles.sequenceObj.features;
+symbolCodes = p.functionHandles.sequenceObj.symbolCodes;
 
 %  insertShape
 %
@@ -91,14 +91,14 @@ for i=1:nSymbols
     symbolTextures(i) = Screen('OpenOffScreenWindow',p.trial.display.ptr,[bgColor 0],[0 0 2*R 2*R]);
     
     %  Write the shape into the texture pointer
-    insertShape(symbolTextures(i),symbolFeatures.shapes{symbolCodes(i,1)},p.trial.display.colors.(symbolFeatures.colors{symbolCodes(i,2)}));
+    insertShape(symbolTextures(i),symbolFeatures.shapes{symbolCodes(i,3)},p.trial.display.colors.(symbolFeatures.colors{symbolCodes(i,1)}));
     
     %  Set the alpha blending on the symbol texture such that only the
     %  alpha channel is modified when we write the mask into it.
     Screen('Blendfunction',symbolTextures(i),[],[],[0,0,0,1]);
     
     %  Write the alpha mask texture into the symbol
-    alphaMaskTexture = Screen('MakeTexture',p.trial.display.ptr,alphaMask.(symbolFeatures.patterns{symbolCodes(i,3)}));
+    alphaMaskTexture = Screen('MakeTexture',p.trial.display.ptr,alphaMask.(symbolFeatures.patterns{symbolCodes(i,2)}));
     Screen('DrawTexture',symbolTextures(i),alphaMaskTexture);
 end
 end

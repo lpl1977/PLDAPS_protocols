@@ -6,6 +6,7 @@ classdef outcome < handle
     %  ll2833@columbia.edu
     
     properties (SetAccess = private)
+        trialType
         response
         responseTime
         rewardedResponse
@@ -25,7 +26,8 @@ classdef outcome < handle
         
         %  Class constructor
         function obj = outcome(varargin)
-            obj.rewardedResponse = varargin{1};
+            obj.trialType = varargin{1};
+            obj.rewardedResponse = varargin{2};
         end
         
         %  trial response
@@ -61,6 +63,8 @@ classdef outcome < handle
         end
         
         function output = commit(obj)
+            output.trialType = obj.trialType;
+            output.rewardedResponse = obj.rewardedResponse;
             if(obj.trialAborted)
                 output.abortState = obj.abortState;
                 output.abortTime = obj.abortTime;
@@ -69,7 +73,6 @@ classdef outcome < handle
                 output.interruptMessage = obj.interruptMessage;
             else
                 output.response = obj.response;
-                output.rewardedResponse = obj.rewardedResponse;
                 output.correct = obj.correct;
             end
         end

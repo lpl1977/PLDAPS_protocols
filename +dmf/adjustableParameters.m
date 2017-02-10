@@ -15,27 +15,37 @@ if(nargin==1)
             p.functionHandles.includedResponses = {'left','center','right'};
             
             p.functionHandles.stimConfig(1).response = 'left';
+            p.functionHandles.stimConfig(1).trialType = 'LeftColor';
             p.functionHandles.stimConfig(1).positions = {'left','center'};
 
             p.functionHandles.stimConfig(2).response = 'center';
+            p.functionHandles.stimConfig(2).trialType = 'LeftColor';
             p.functionHandles.stimConfig(2).positions = {'left','center'};
             
             p.functionHandles.stimConfig(3).response = 'center';
+            p.functionHandles.stimConfig(3).trialType = 'RightColor';
             p.functionHandles.stimConfig(3).positions = {'center','right'};
             
             p.functionHandles.stimConfig(4).response = 'right';
+            p.functionHandles.stimConfig(4).trialType = 'RightColor';
             p.functionHandles.stimConfig(4).positions = {'center','right'};
+
+            p.functionHandles.rewardedResponses = {'left','center','center','right'};
+            p.functionHandles.trialTypes = {'LeftColor','LeftColor','RightColor','RightColor'};
             
         case 'meatball'
             p.functionHandles.includedResponses = {'left','center','right'};
             
             p.functionHandles.stimConfig(1).response = 'left';
+            p.functionHandles.stimConfig(1).trialType = '';
             p.functionHandles.stimConfig(1).positions = {'left'};
 
             p.functionHandles.stimConfig(2).response = 'center';
+            p.functionHandles.stimConfig(2).trialType = '';
             p.functionHandles.stimConfig(2).positions = {'center'};
             
             p.functionHandles.stimConfig(3).response = 'right';
+            p.functionHandles.stimConfig(3).trialType = '';
             p.functionHandles.stimConfig(3).positions = {'right'};
         case 'splinter'
             p.functionHandles.includedResponses = {'center'};
