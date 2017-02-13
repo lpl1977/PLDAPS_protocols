@@ -48,15 +48,15 @@ classdef sequence < handle
             
             %  Determine number of examples of each feature
             fieldNames = fieldnames(obj.features);
-            nfeatures = length(fieldNames);
-            nexamples = zeros(nfeatures,1);
-            for i=1:nfeatures
-                nexamples(i) = length(obj.features.(fieldNames{i}));
+            nFeatures = length(fieldNames);
+            nExamples = zeros(nFeatures,1);
+            for i=1:nFeatures
+                nExamples(i) = length(obj.features.(fieldNames{i}));
             end
             
             %  Generate a list of all possible combinations of features (all possible
             %  symbols)
-            obj.symbolCodes = obj.comblist(nexamples);
+            obj.symbolCodes = obj.comblist(nExamples);
             nsymbols = size(obj.symbolCodes,1);
             
             %  Generate a list of all possible sequences of three symbols
@@ -65,17 +65,19 @@ classdef sequence < handle
         
         %  Selector
         %
-        %  Select possible sequences based on rules
-        function [sequences,selectedCodes] = selector(obj,rules)
+        %  Select possible sequences based on rules.  If multiple rules are
+        %  provided then the output will reflect all sequences that satisfy
+        %  at least one of the rules.
+        function [sequences,selectedCodes,satisfiedRules] = selector(obj,rules)
             
             %  Number of sequences, rules, and features
-            nsequences = size(obj.sequenceCodes,1);
-            nrules = size(rules,1);
-            if nrules==1
+            nSequences = size(obj.sequenceCodes,1);
+            if(~iscell(rules))
                 rules = {rules};
             end
+            nRules = numel(rules);
             fieldNames = fieldnames(obj.features);
-            nfeatures = length(fieldNames);
+            nFeatures = length(fieldNames);
             
             %  Short names for the sake of simplicity
             symb = obj.symbolCodes;
@@ -83,15 +85,16 @@ classdef sequence < handle
             
             %  Create logical index vector indicating satisfaction of the UNION of the
             %  rules.
-            indx = false(nsequences,1);
+            indx = false(nSequences,1);
+            satisfiedRules = cell(nSequences,1);
             
             %  Apply the rules sequentially to each feature of each sequence
-            for j=1:nsequences
+            for j=1:nSequences
                 k = 1;
-                while ~indx(j) && k<=nrules
+                while ~indx(j) && k<=nRules
                     indx(j) = true;
                     i = 1;
-                    while indx(j) && i<=min(nfeatures,length(rules{k}))
+                    while indx(j) && i<=min(nFeatures,length(rules{k}))
                         switch rules{k}(i)
                             case '0'
                                 indx(j) = symb(seq(j,1),i)~=symb(seq(j,2),i) && symb(seq(j,1),i)~=symb(seq(j,3),i) && symb(seq(j,2),i)~=symb(seq(j,3),i);
@@ -104,6 +107,15 @@ classdef sequence < handle
                             case '4'
                                 indx(j) = symb(seq(j,1),i)==symb(seq(j,2),i) && symb(seq(j,1),i)==symb(seq(j,3),i) && symb(seq(j,2),i)==symb(seq(j,3),i);
                         end
+                        if(indx(j))
+                            if(isempty(satisfiedRules{j}))
+                                satisfiedRules{j} = rules{k};
+                            else
+                                if(isempty(strfind(satisfiedRules{j},rules{k})))
+                                    satisfiedRules{j} = strcat(satisfiedRules{j},'.',rules{k});
+                                end
+                            end
+                        end
                         i = i+1;
                     end
                     k = k+1;
@@ -112,18 +124,17 @@ classdef sequence < handle
             
             %  Generate feature list
             selectedCodes = obj.sequenceCodes(indx,:);
+            satisfiedRules = satisfiedRules(indx);
             sequences = cell(size(selectedCodes,1),3);
             for i=1:size(sequences,1)
                 for j=1:3
-                    sequences{i,j} = cell(1,nfeatures);
-                    for k=1:nfeatures
+                    sequences{i,j} = cell(1,nFeatures);
+                    for k=1:nFeatures
                         sequences{i,j}(k) = obj.features.(fieldNames{k})(symb(selectedCodes(i,j),k));
                     end
                 end
-            end
-            
-        end
-        
+            end            
+        end        
     end
     
     methods (Static)
@@ -133,26 +144,26 @@ classdef sequence < handle
         %  generate all possible combinations of feature example lists
         %
         %  Input:
-        %  nexamples--length N vector indicating number of examples
+        %  nExamples--length N vector indicating number of examples
         %
         %  Output:
         %  A--matrix containing all possible combination of indices into
         %  the lists.  A is prod(N) by N.        
-        function A = comblist(nexamples)
+        function A = comblist(nExamples)
             
             %  Number of lists
-            N = length(nexamples);
+            N = length(nExamples);
             
             %  Number of combinations
-            M = prod(nexamples);
+            M = prod(nExamples);
             
             %  Matrix containing possible combinations
-            A = zeros(prod(nexamples),N);
+            A = zeros(prod(nExamples),N);
             
             %  Iterate over features to populate matrix
-            inc = [1 ; cumprod(nexamples(:))];
+            inc = [1 ; cumprod(nExamples(:))];
             for i=1:N
-                Ai = repmat(1:nexamples(i),inc(i),M/(inc(i)*nexamples(i)));
+                Ai = repmat(1:nExamples(i),inc(i),M/(inc(i)*nExamples(i)));
                 A(:,i) = Ai(:);
             end
         end

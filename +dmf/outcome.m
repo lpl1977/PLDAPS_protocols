@@ -6,7 +6,7 @@ classdef outcome < handle
     %  ll2833@columbia.edu
     
     properties (SetAccess = private)
-        trialType
+        satisfiedRule
         response
         responseTime
         rewardedResponse
@@ -26,7 +26,7 @@ classdef outcome < handle
         
         %  Class constructor
         function obj = outcome(varargin)
-            obj.trialType = varargin{1};
+            obj.satisfiedRule = varargin{1};
             obj.rewardedResponse = varargin{2};
         end
         
@@ -63,7 +63,7 @@ classdef outcome < handle
         end
         
         function output = commit(obj)
-            output.trialType = obj.trialType;
+            output.satisfiedRule = obj.satisfiedRule;
             output.rewardedResponse = obj.rewardedResponse;
             if(obj.trialAborted)
                 output.abortState = obj.abortState;

@@ -36,7 +36,7 @@ switch state
         
         %  Make last minute custom adjustments based on subject
         dmf.adjustableParameters(p,state);
-
+        
         %  Generate symbol textures at beginning of experiment (we can only
         %  do this once we have the display pointer, and we only need do it
         %  this one time)
@@ -79,7 +79,7 @@ switch state
         p.functionHandles.stateVariables = stateControl('start');
         
         %  Initialize trial outcome object
-        p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.trialType,p.trial.condition.rewardedResponse);
+        p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.satisfiedRule,p.trial.condition.rewardedResponse);
         
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
@@ -87,46 +87,37 @@ switch state
         p.functionHandles.showWarning = false;
         p.functionHandles.showEngage = false;
         p.functionHandles.showHold = false;
-          
+        
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);
         
-        %  Determine if reward is available this trial
-        p.functionHandles.rewardAvailable = unifrnd(0,1) <= p.functionHandles.conditionalRewardRate;
-                            
+        disp(p.trial.condition)
+        
         %  Echo trial specs to screen
         fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
         fprintf('%20s:\n','Symbols');
-        for i=1:length(p.trial.condition.displayPositions)
-            fprintf('%20s:  ',p.trial.condition.displayPositions{i});            
-                switch p.trial.condition.displayPositions{i}
-                    case 'left'
-                        indx = 1;
-                    case 'center'
-                        indx = 2;
-                    case 'right'
-                        indx = 3;
-                end
-            fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(indx),1)});
-            fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(indx),2)});
-            fprintf('%s ',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(indx),3)});
-            fprintf('\n');
-        end
-        fprintf('%20s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
-        fprintf('%20s:  %s\n','Reward available',p.functionHandles.rewardAvailable);
+        fprintf('%20s:  ','left');
+        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),1)});
+        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),2)});
+        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),3)});
         fprintf('\n');
-        
-        %         for pos = {'left','center','right'}
-        %             if(p.functionHandles.stateControl.displayPosition.(pos{:}))
-        %                 color = p.trial.condition.symbol.(pos{:}).color;
-        %                 pattern = p.trial.condition.symbol.(pos{:}).pattern;
-        %                 shape = p.trial.condition.symbol.(pos{:}).shape;
-        %
-        %                 fprintf('    Symbol at %6s:  %s %s %s\n',pos{:},color,pattern,shape);
-        %             end
-        %         end
-        %         fprintf('  Response direction:  %s\n',p.trial.condition.rewardedResponse);
-        %         fprintf('          Match type:  %s\n',p.trial.condition.matchType);
+        fprintf('%20s:  ','center');
+        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),1)});
+        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),2)});
+        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),3)});
+        fprintf('\n');
+        fprintf('%20s:  ','right');
+        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),1)});
+        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),2)});
+        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),3)});
+        fprintf('\n');
+        fprintf('%20s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
+        fprintf('%20s:  %s\n','Satisifed rule',p.trial.condition.satisfiedRule);
+        fprintf('%20s:  S1 S2 S3\n','Configuration');
+        fprintf('%20s:  %2d %2d %2d\n','left',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(1,:));
+        fprintf('%20s:  %2d %2d %2d\n','center',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(2,:));
+        fprintf('%20s:  %2d %2d %2d\n','right',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(3,:));
+        fprintf('\n');
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  cleanUpandSave--post trial management; perform any steps that
@@ -211,20 +202,16 @@ switch state
         %  if there is a call to a function calling Screen, put it here!
         
         if(p.functionHandles.showSymbols)
-            for i=1:length(p.trial.condition.displayPositions)
-                symbolCenter = p.functionHandles.geometry.symbolCenters.(p.trial.condition.displayPositions{i});
-                baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
-                centeredRect = CenterRectOnPoint(baseRect,symbolCenter(1),symbolCenter(2));
-                switch p.trial.condition.displayPositions{i}
-                    case 'left'
-                        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(1)),[],centeredRect);
-                    case 'center'
-                        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(2)),[],centeredRect);
-                    case 'right'
-                        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(3)),[],centeredRect);
+            baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
+            for i=1:3
+                if(p.trial.condition.displayPositions(i,1))
+                    symbolCenter = p.functionHandles.geometry.symbolCenters(i,:);
+                    centeredRect = CenterRectOnPoint(baseRect,symbolCenter(1),symbolCenter(2));
+                    Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(i)),[],centeredRect);
                 end
             end
         end
+        
         %  Draw the cursor (there is an internal check for cursor
         %  visibility).
         if(p.functionHandles.showWarning)
@@ -442,10 +429,10 @@ switch state
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
- %                   p.functionHandles.analogStickCursorObj.visible = true;
+                    %                   p.functionHandles.analogStickCursorObj.visible = true;
                     p.functionHandles.showSymbols = true;
                 else
-                    p.functionHandles.showHold = false;                    
+                    p.functionHandles.showHold = false;
                     p.functionHandles.stateVariables.nextState = 'response';
                 end
                 
@@ -551,33 +538,26 @@ switch state
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.rewardDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                     
-                    %  May not dispense reward on this trial...
-                    if(p.functionHandles.rewardAvailable)
-                        
-                        %  This section for a2duino managed reward
-                        if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
-                            p.functionHandles.rewardManagerObj.giveReward('pellet');
-                        else
-                            pds.behavior.reward.give(p,p.functionHandles.reward);
-                        end
+                    %  This section for a2duino managed reward
+                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
+                        p.functionHandles.rewardManagerObj.giveReward('pellet');
+                    else
+                        pds.behavior.reward.give(p,p.functionHandles.reward);
                     end
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     
-                    %  May not have dispensed reward on this trial
-                    if(p.functionHandles.rewardAvailable)
-                        
-                        %  Check to make sure the reward is not currently in
-                        %  progress (only relevant for pellets)
-                        if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
-                            p.functionHandles.rewardManagerObj.checkRewardStatus;
-                            if(~p.functionHandles.rewardManagerObj.releaseInProgress)
-                                p.trial.flagNextTrial = true;
-                            end
-                        else
+                    %  Check to make sure the reward is not currently in
+                    %  progress (only relevant for pellets)
+                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
+                        p.functionHandles.rewardManagerObj.checkRewardStatus;
+                        if(~p.functionHandles.rewardManagerObj.releaseInProgress)
                             p.trial.flagNextTrial = true;
                         end
+                    else
+                        p.trial.flagNextTrial = true;
                     end
                 end
+                
             case 'error'
                 
                 %  STATE:  error

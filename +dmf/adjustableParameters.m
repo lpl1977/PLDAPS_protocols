@@ -11,47 +11,21 @@ if(nargin==1)
     %  Non state dependent steps--could be called in the experiment setup
     %  file
     switch lower(p.trial.session.subject)
-        case {'murray','debug'}
-            p.functionHandles.includedResponses = {'left','center','right'};
-            
-            p.functionHandles.stimConfig(1).response = 'left';
-            p.functionHandles.stimConfig(1).trialType = 'LeftColor';
-            p.functionHandles.stimConfig(1).positions = {'left','center'};
-
-            p.functionHandles.stimConfig(2).response = 'center';
-            p.functionHandles.stimConfig(2).trialType = 'LeftColor';
-            p.functionHandles.stimConfig(2).positions = {'left','center'};
-            
-            p.functionHandles.stimConfig(3).response = 'center';
-            p.functionHandles.stimConfig(3).trialType = 'RightColor';
-            p.functionHandles.stimConfig(3).positions = {'center','right'};
-            
-            p.functionHandles.stimConfig(4).response = 'right';
-            p.functionHandles.stimConfig(4).trialType = 'RightColor';
-            p.functionHandles.stimConfig(4).positions = {'center','right'};
-
-            p.functionHandles.rewardedResponses = {'left','center','center','right'};
-            p.functionHandles.trialTypes = {'LeftColor','LeftColor','RightColor','RightColor'};
-            
-        case 'meatball'
-            p.functionHandles.includedResponses = {'left','center','right'};
-            
-            p.functionHandles.stimConfig(1).response = 'left';
-            p.functionHandles.stimConfig(1).trialType = '';
-            p.functionHandles.stimConfig(1).positions = {'left'};
-
-            p.functionHandles.stimConfig(2).response = 'center';
-            p.functionHandles.stimConfig(2).trialType = '';
-            p.functionHandles.stimConfig(2).positions = {'center'};
-            
-            p.functionHandles.stimConfig(3).response = 'right';
-            p.functionHandles.stimConfig(3).trialType = '';
-            p.functionHandles.stimConfig(3).positions = {'right'};
+        case 'murray'
+            p.functionHandles.includedResponses = {'left','center','right'};                        
+            p.functionHandles.displayConfig.left = ones(3);
+            p.functionHandles.displayConfig.right = ones(3);
+            p.functionHandles.displayConfig.center = ones(3);            
+        case {'meatball','debug'}
+            p.functionHandles.includedResponses = {'left','center','right'};                        
+            p.functionHandles.displayConfig.left = [ones(1,3); zeros(2,3)];
+            p.functionHandles.displayConfig.right = [zeros(2,3); ones(1,3)];
+            p.functionHandles.displayConfig.center = [zeros(1,3); ones(1,3); zeros(1,3)];            
         case 'splinter'
-            p.functionHandles.includedResponses = {'center'};
-
-            p.functionHandles.stimConfig(1).response = 'center';
-            p.functionHandles.stimConfig(1).positions = {'center'};            
+            p.functionHandles.includedResponses = {'center'};                        
+            p.functionHandles.displayConfig.left = [ones(1,3); zeros(2,3)];
+            p.functionHandles.displayConfig.right = [zeros(2,3); ones(1,3)];
+            p.functionHandles.displayConfig.center = [zeros(1,3); ones(1,3); zeros(1,3)];            
     end
 else
     
