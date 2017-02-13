@@ -51,7 +51,7 @@ switch state
         fprintf(1,'****************************************************************\n');
         
         %  If this is the mini-rig then prepare to use the rewardManager
-        if(isField(p.trial,'a2duino') && p.trial.a2duino.useForReward)
+        if(isField(p.trial,'a2duino') && p.trial.a2duino.use)
             fprintf(1,'****************************************************************\n');
             fprintf(1,'Using the a2duino DAQ for reward.  Initialize rewardManager\n');
             fprintf(1,'****************************************************************\n');
