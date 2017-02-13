@@ -12,13 +12,20 @@ if(nargin==1)
     %  file
     switch lower(p.trial.session.subject)
         case 'murray'
-            p.functionHandles.includedResponses = {'left','center','right'};
-        case 'meatball'
-            p.functionHandles.includedResponses = {'left','left','center','right','right'};
+            p.functionHandles.includedResponses = {'left','center','right'};                        
+            p.functionHandles.displayConfig.left = ones(3);
+            p.functionHandles.displayConfig.right = ones(3);
+            p.functionHandles.displayConfig.center = ones(3);            
+        case {'meatball','debug'}
+            p.functionHandles.includedResponses = {'left','center','right'};                        
+            p.functionHandles.displayConfig.left = [ones(1,3); zeros(2,3)];
+            p.functionHandles.displayConfig.right = [zeros(2,3); ones(1,3)];
+            p.functionHandles.displayConfig.center = [zeros(1,3); ones(1,3); zeros(1,3)];            
         case 'splinter'
-            p.functionHandles.includedResponses = {'left','center','right'};
-        case 'debug'
-            p.functionHandles.includedResponses = {'center'};
+            p.functionHandles.includedResponses = {'center'};                        
+            p.functionHandles.displayConfig.left = [ones(1,3); zeros(2,3)];
+            p.functionHandles.displayConfig.right = [zeros(2,3); ones(1,3)];
+            p.functionHandles.displayConfig.center = [zeros(1,3); ones(1,3); zeros(1,3)];            
     end
 else
     

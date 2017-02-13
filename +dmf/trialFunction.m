@@ -36,7 +36,7 @@ switch state
         
         %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
-
+        
         %  Generate symbol textures at beginning of experiment (we can only
         %  do this once we have the display pointer, and we only need do it
         %  this one time)
@@ -78,7 +78,7 @@ switch state
         p.functionHandles.stateVariables = stateControl('start');
         
         %  Initialize trial outcome object
-        p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.rewardedResponse);
+        p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.satisfiedRule,p.trial.condition.rewardedResponse);
         
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
@@ -90,23 +90,33 @@ switch state
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);        
         
+        disp(p.trial.condition)
+        
         %  Echo trial specs to screen
         fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
-        fprintf('            Symbol:  %s %s %s\n',p.trial.condition.symbol.color,p.trial.condition.symbol.pattern,p.trial.condition.symbol.shape);
-        fprintf(' Rewarded response:  %s\n',p.trial.condition.rewardedResponse);
+        fprintf('%20s:\n','Symbols');
+        fprintf('%20s:  ','left');
+        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),1)});
+        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),2)});
+        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),3)});
         fprintf('\n');
-        
-        %         for pos = {'left','center','right'}
-        %             if(p.functionHandles.stateControl.displayPosition.(pos{:}))
-        %                 color = p.trial.condition.symbol.(pos{:}).color;
-        %                 pattern = p.trial.condition.symbol.(pos{:}).pattern;
-        %                 shape = p.trial.condition.symbol.(pos{:}).shape;
-        %
-        %                 fprintf('    Symbol at %6s:  %s %s %s\n',pos{:},color,pattern,shape);
-        %             end
-        %         end
-        %         fprintf('  Response direction:  %s\n',p.trial.condition.rewardedResponse);
-        %         fprintf('          Match type:  %s\n',p.trial.condition.matchType);
+        fprintf('%20s:  ','center');
+        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),1)});
+        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),2)});
+        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),3)});
+        fprintf('\n');
+        fprintf('%20s:  ','right');
+        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),1)});
+        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),2)});
+        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),3)});
+        fprintf('\n');
+        fprintf('%20s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
+        fprintf('%20s:  %s\n','Satisifed rule',p.trial.condition.satisfiedRule);
+        fprintf('%20s:  S1 S2 S3\n','Configuration');
+        fprintf('%20s:  %2d %2d %2d\n','left',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(1,:));
+        fprintf('%20s:  %2d %2d %2d\n','center',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(2,:));
+        fprintf('%20s:  %2d %2d %2d\n','right',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(3,:));
+        fprintf('\n');
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  cleanUpandSave--post trial management; perform any steps that
@@ -191,10 +201,14 @@ switch state
         %  if there is a call to a function calling Screen, put it here!
         
         if(p.functionHandles.showSymbols)
-            symbolCenter = p.functionHandles.geometry.symbolCenters.(p.trial.condition.rewardedResponse);
             baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
-            centeredRect = CenterRectOnPoint(baseRect,symbolCenter(1),symbolCenter(2));
-            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndex),[],centeredRect);
+            for i=1:3
+                if(p.trial.condition.displayPositions(i,1))
+                    symbolCenter = p.functionHandles.geometry.symbolCenters(i,:);
+                    centeredRect = CenterRectOnPoint(baseRect,symbolCenter(1),symbolCenter(2));
+                    Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(i)),[],centeredRect);
+                end
+            end
         end
         
         %  Draw the cursor (there is an internal check for cursor
@@ -416,7 +430,7 @@ switch state
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                     p.functionHandles.showSymbols = true;
                 else
-                    p.functionHandles.showHold = false;                    
+                    p.functionHandles.showHold = false;
                     p.functionHandles.stateVariables.nextState = 'response';
                 end
                 

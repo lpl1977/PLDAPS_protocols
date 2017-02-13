@@ -28,9 +28,10 @@ p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
 p.functionHandles.geometry.symbolDisplacement = 350;
 p.functionHandles.geometry.symbolRadius = 150;
 p.functionHandles.geometry.center = p.trial.display.ctr(1:2);
-p.functionHandles.geometry.symbolCenters.left = [p.functionHandles.geometry.center(1)-p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
-p.functionHandles.geometry.symbolCenters.center = [p.functionHandles.geometry.center(1) p.functionHandles.geometry.center(2)];
-p.functionHandles.geometry.symbolCenters.right = [p.functionHandles.geometry.center(1)+p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
+p.functionHandles.geometry.symbolCenters = [...
+    p.functionHandles.geometry.center(1)-p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2);...
+    p.functionHandles.geometry.center(1) p.functionHandles.geometry.center(2); ...
+    p.functionHandles.geometry.center(1)+p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
 
 %  Features
 p.functionHandles.features.symbolRadius = p.functionHandles.geometry.symbolRadius;
@@ -54,32 +55,47 @@ colors = {'blue','scarlet','yellow'};
 patterns = {'waffle','concentricCircles','spiral'};
 shapes = {'triangle','diamond','pentagon'};
 
-S = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
-nSymbols = size(S.symbolCodes,1);
+p.functionHandles.sequenceObj = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 
-p.functionHandles.rewardedResponses = {'left','center','right'};
-p.functionHandles.sequences = S;
+[~,colorSequenceCodes.left,colorSatisfiedRules.left] = p.functionHandles.sequenceObj.selector('100');
+[~,colorSequenceCodes.right,colorSatisfiedRules.right] = p.functionHandles.sequenceObj.selector('300');
+[~,colorSequenceCodes.center,colorSatisfiedRules.center] = p.functionHandles.sequenceObj.selector({'000','400'}); 
 
+nSequencesPerResponse = lcm(lcm(size(colorSequenceCodes.left,1),size(colorSequenceCodes.right,1)),size(colorSequenceCodes.center,1));
+colorSequenceCodes.left = repmat(colorSequenceCodes.left,nSequencesPerResponse/size(colorSequenceCodes.left,1),1);
+colorSequenceCodes.right = repmat(colorSequenceCodes.right,nSequencesPerResponse/size(colorSequenceCodes.right,1),1);
+colorSequenceCodes.center = repmat(colorSequenceCodes.center,nSequencesPerResponse/size(colorSequenceCodes.center,1),1);
+
+colorSatisfiedRules.left = repmat(colorSatisfiedRules.left,nSequencesPerResponse/size(colorSatisfiedRules.left,1),1);
+colorSatisfiedRules.right = repmat(colorSatisfiedRules.right,nSequencesPerResponse/size(colorSatisfiedRules.right,1),1);
+colorSatisfiedRules.center = repmat(colorSatisfiedRules.center,nSequencesPerResponse/size(colorSatisfiedRules.center,1),1);
+
+p.functionHandles.rewardedResponses = {'left','right','center'};
 if(~isfield(p.functionHandles,'includedResponses'))
-    p.functionHandles.includedResponses = p.functionHandles.rewardedResponses;
+    p.functionHandles.includedResponses = unique(p.functionHandles.rewardedResponses);
 end
 
-c = cell(nSymbols*length(p.functionHandles.includedResponses),1);
-for i=1:nSymbols
-    for j=1:length(p.functionHandles.includedResponses)
-        c{i+(j-1)*nSymbols}.symbolIndex = i;
-        c{i+(j-1)*nSymbols}.symbol.color = S.features.colors{S.symbolCodes(i,1)};
-        c{i+(j-1)*nSymbols}.symbol.pattern = S.features.patterns{S.symbolCodes(i,2)};
-        c{i+(j-1)*nSymbols}.symbol.shape = S.features.shapes{S.symbolCodes(i,3)};
-        c{i+(j-1)*nSymbols}.rewardedResponse = p.functionHandles.includedResponses{j};
+c = cell(nSequencesPerResponse*numel(p.functionHandles.includedResponses),1);
+for i=1:length(p.functionHandles.includedResponses)
+    for j=1:nSequencesPerResponse
+        c{(i-1)*nSequencesPerResponse+j}.symbolIndices = colorSequenceCodes.(p.functionHandles.includedResponses{i})(j,:);
+        c{(i-1)*nSequencesPerResponse+j}.rewardedResponse = p.functionHandles.includedResponses{i};
+        c{(i-1)*nSequencesPerResponse+j}.satisfiedRule = colorSatisfiedRules.(p.functionHandles.includedResponses{i}){j};
+        c{(i-1)*nSequencesPerResponse+j}.displayPositions = p.functionHandles.displayConfig.(p.functionHandles.includedResponses{i});
     end
 end
-c = repmat(c,20,1);   
 p.conditions = Shuffle(c); 
 p.trial.pldaps.finish = length(p.conditions);
 
 %  Initialize performance tracking
-p.functionHandles.performance = dmf.performanceTracking(p.functionHandles.rewardedResponses);
+satisfiedRules = [];
+rewardedResponses = [];
+for i=1:length(p.functionHandles.rewardedResponses)
+    temp = unique(colorSatisfiedRules.(p.functionHandles.rewardedResponses{i}));
+    satisfiedRules = [satisfiedRules; temp];
+    rewardedResponses = [rewardedResponses; repmat(p.functionHandles.rewardedResponses(i),numel(temp),1)];
+end
+p.functionHandles.performance = dmf.performanceTracking(satisfiedRules,rewardedResponses);
 
 
 % leftColorMatchTrials{i}.symbol.(pos{j}).color = leftColorSequences{i,j}{1};
