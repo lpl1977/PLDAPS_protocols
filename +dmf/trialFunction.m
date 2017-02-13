@@ -15,7 +15,7 @@ function p = trialFunction(p,state)
 
 switch state
     
-    case p.trial.pldaps.trialStates.experimentPostOpenScreen
+    case p.trial.pldaps.trialStates.experimentPostOpenScreen        
         %  experimentPostOpenScreen--executed once after screen has been
         %  opened.
         
@@ -34,7 +34,7 @@ switch state
         p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -p.functionHandles.geometry.centerWindow -0.5]);
         p.functionHandles.analogStickWindowManager.addWindow('right',[p.functionHandles.geometry.centerWindow -1 1 -0.5]);
         
-        %  Make last minute custom adjustments based on subject
+        %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
         
         %  Generate symbol textures at beginning of experiment (we can only
@@ -51,10 +51,9 @@ switch state
         fprintf(1,'****************************************************************\n');
         
         %  If this is the mini-rig then prepare to use the rewardManager
-        %  Initialize reward management if this is the console
-        if(isField(p.trial,'a2duino') && p.trial.a2duino.use)
+        if(isField(p.trial,'a2duino') && p.trial.a2duino.useForReward)
             fprintf(1,'****************************************************************\n');
-            fprintf(1,'Appears to be using the a2duino DAQ.  Initialize rewardManager\n');
+            fprintf(1,'Using the a2duino DAQ for reward.  Initialize rewardManager\n');
             fprintf(1,'****************************************************************\n');
             p.functionHandles.rewardManagerObj = a2duino.rewardManager(p.functionHandles.a2duinoObj);
         end
@@ -89,7 +88,7 @@ switch state
         p.functionHandles.showHold = false;
         
         %  Set any adjustable parameters
-        dmf.adjustableParameters(p,state);
+        dmf.adjustableParameters(p,state);        
         
         disp(p.trial.condition)
         
@@ -215,13 +214,13 @@ switch state
         %  Draw the cursor (there is an internal check for cursor
         %  visibility).
         if(p.functionHandles.showWarning)
-            fillColor = [1 0 0];
+            fillColor = [0.8 0 0 1];
         elseif(p.functionHandles.showEngage)
-            fillColor = [0 1 0];
+            fillColor = [0 0.8 0 1];
         elseif(p.functionHandles.showHold)
-            fillColor = [1 1 1];
+            fillColor = [0.8 0.8 0.8 1];
         else
-            fillColor = [0 0 0];
+            fillColor = [0 0 0 0];
         end
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
         screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);
@@ -429,7 +428,6 @@ switch state
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
-                    %                   p.functionHandles.analogStickCursorObj.visible = true;
                     p.functionHandles.showSymbols = true;
                 else
                     p.functionHandles.showHold = false;
@@ -525,8 +523,7 @@ switch state
                         p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                         p.functionHandles.trialOutcome.recordAbort(p.functionHandles.stateVariables.currentState,'invalidResponse');
                     end
-                end
-                
+                end   
                 
             case 'reward'
                 
