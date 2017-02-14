@@ -12,20 +12,29 @@ if(nargin==1)
     %  file
     switch lower(p.trial.session.subject)
         case 'murray'
-            p.functionHandles.includedResponses = {'left','center','right'};                        
-            p.functionHandles.displayConfig.left = ones(3);
-            p.functionHandles.displayConfig.right = ones(3);
-            p.functionHandles.displayConfig.center = ones(3);            
-        case {'meatball','debug'}
-            p.functionHandles.includedResponses = {'left','center','right'};                        
-            p.functionHandles.displayConfig.left = [ones(1,3); zeros(2,3)];
-            p.functionHandles.displayConfig.right = [zeros(2,3); ones(1,3)];
-            p.functionHandles.displayConfig.center = [zeros(1,3); ones(1,3); zeros(1,3)];            
+            p.functionHandles.includedResponses = {'left','center','right'};
+            symbolAlphas = 0.25;
+            p.functionHandles.symbolAlphas.left = [ones(1,3); symbolAlphas*ones(2,3)];
+            p.functionHandles.symbolAlphas.center = [symbolAlphas*ones(1,3); ones(1,3); symbolAlphas*ones(1,3)];
+            p.functionHandles.symbolAlphas.right = [symbolAlphas*ones(2,3); ones(1,3)];
+        case 'meatball'
+            p.functionHandles.includedResponses = {'left','center','right'};
+            symbolAlphas = 0;
+            p.functionHandles.symbolAlphas.left = [ones(1,3); symbolAlphas*ones(2,3)];
+            p.functionHandles.symbolAlphas.center = [symbolAlphas*ones(1,3); ones(1,3); symbolAlphas*ones(1,3)];
+            p.functionHandles.symbolAlphas.right = [symbolAlphas*ones(2,3); ones(1,3)];
         case 'splinter'
-            p.functionHandles.includedResponses = {'center'};                        
-            p.functionHandles.displayConfig.left = [ones(1,3); zeros(2,3)];
-            p.functionHandles.displayConfig.right = [zeros(2,3); ones(1,3)];
-            p.functionHandles.displayConfig.center = [zeros(1,3); ones(1,3); zeros(1,3)];            
+            p.functionHandles.includedResponses = {'left','center','right'};
+            symbolAlphas = 0;
+            p.functionHandles.symbolAlphas.left = [ones(1,3); symbolAlphas*ones(2,3)];
+            p.functionHandles.symbolAlphas.center = [symbolAlphas*ones(1,3); ones(1,3); symbolAlphas*ones(1,3)];
+            p.functionHandles.symbolAlphas.right = [symbolAlphas*ones(2,3); ones(1,3)];
+        case 'debug'
+            p.functionHandles.includedResponses = {'left','center','right'};
+            symbolAlphas = 0.25;
+            p.functionHandles.symbolAlphas.left = [ones(1,3); symbolAlphas*ones(2,3)];
+            p.functionHandles.symbolAlphas.center = [symbolAlphas*ones(1,3); ones(1,3); symbolAlphas*ones(1,3)];
+            p.functionHandles.symbolAlphas.right = [symbolAlphas*ones(2,3); ones(1,3)];
     end
 else
     
@@ -34,7 +43,7 @@ else
     switch state
         case p.trial.pldaps.trialStates.experimentPostOpenScreen
             
-            %  Here you could adjust windows           
+            %  Here you could adjust windows
             switch lower(p.trial.session.subject)
                 case 'murray'
                 case 'meatball'

@@ -70,9 +70,9 @@ colorSatisfiedRules.left = repmat(colorSatisfiedRules.left,nSequencesPerResponse
 colorSatisfiedRules.right = repmat(colorSatisfiedRules.right,nSequencesPerResponse/size(colorSatisfiedRules.right,1),1);
 colorSatisfiedRules.center = repmat(colorSatisfiedRules.center,nSequencesPerResponse/size(colorSatisfiedRules.center,1),1);
 
-p.functionHandles.rewardedResponses = {'left','right','center'};
+p.functionHandles.possibleResponses = {'left','center','right'};
 if(~isfield(p.functionHandles,'includedResponses'))
-    p.functionHandles.includedResponses = unique(p.functionHandles.rewardedResponses);
+    p.functionHandles.includedResponses = unique(p.functionHandles.possibleResponses);
 end
 
 c = cell(nSequencesPerResponse*numel(p.functionHandles.includedResponses),1);
@@ -81,7 +81,7 @@ for i=1:length(p.functionHandles.includedResponses)
         c{(i-1)*nSequencesPerResponse+j}.symbolIndices = colorSequenceCodes.(p.functionHandles.includedResponses{i})(j,:);
         c{(i-1)*nSequencesPerResponse+j}.rewardedResponse = p.functionHandles.includedResponses{i};
         c{(i-1)*nSequencesPerResponse+j}.satisfiedRule = colorSatisfiedRules.(p.functionHandles.includedResponses{i}){j};
-        c{(i-1)*nSequencesPerResponse+j}.displayPositions = p.functionHandles.displayConfig.(p.functionHandles.includedResponses{i});
+        c{(i-1)*nSequencesPerResponse+j}.symbolAlphas = p.functionHandles.symbolAlphas.(p.functionHandles.includedResponses{i});
     end
 end
 p.conditions = Shuffle(c); 
@@ -89,13 +89,13 @@ p.trial.pldaps.finish = length(p.conditions);
 
 %  Initialize performance tracking
 satisfiedRules = [];
-rewardedResponses = [];
-for i=1:length(p.functionHandles.rewardedResponses)
-    temp = unique(colorSatisfiedRules.(p.functionHandles.rewardedResponses{i}));
+possibleResponses = [];
+for i=1:length(p.functionHandles.possibleResponses)
+    temp = unique(colorSatisfiedRules.(p.functionHandles.possibleResponses{i}));
     satisfiedRules = [satisfiedRules; temp];
-    rewardedResponses = [rewardedResponses; repmat(p.functionHandles.rewardedResponses(i),numel(temp),1)];
+    possibleResponses = [possibleResponses; repmat(p.functionHandles.possibleResponses(i),numel(temp),1)];
 end
-p.functionHandles.performance = dmf.performanceTracking(satisfiedRules,rewardedResponses);
+p.functionHandles.performance = dmf.performanceTracking(satisfiedRules,possibleResponses);
 
 
 % leftColorMatchTrials{i}.symbol.(pos{j}).color = leftColorSequences{i,j}{1};

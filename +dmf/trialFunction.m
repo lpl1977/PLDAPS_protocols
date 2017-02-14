@@ -77,9 +77,12 @@ switch state
         %  Initialize trial state variables
         p.functionHandles.stateVariables = stateControl('start');
         
+        %  Create textures for display
+        p.functionHandles.sequenceTextures = dmf.generateSequenceTextures(p);
+        
         %  Initialize trial outcome object
         p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.satisfiedRule,p.trial.condition.rewardedResponse);
-        
+                
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
         p.functionHandles.showSymbols = false;
@@ -90,38 +93,32 @@ switch state
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);        
         
-        disp(p.trial.condition)
-        
         %  Echo trial specs to screen
         fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
         fprintf('%20s:\n','Symbols');
-        fprintf('%20s:  ','left');
-        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),1)});
-        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),2)});
-        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(1),3)});
-        fprintf('\n');
-        fprintf('%20s:  ','center');
-        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),1)});
-        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),2)});
-        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(2),3)});
-        fprintf('\n');
-        fprintf('%20s:  ','right');
-        fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),1)});
-        fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),2)});
-        fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(3),3)});
+        for i=1:3
+            fprintf('%20s:  ',p.functionHandles.possibleResponses{i});
+            fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(i),1)});
+            fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(i),2)});
+            fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(i),3)});
+            fprintf('\n');
+        end
         fprintf('\n');
         fprintf('%20s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
         fprintf('%20s:  %s\n','Satisifed rule',p.trial.condition.satisfiedRule);
-        fprintf('%20s:  S1 S2 S3\n','Configuration');
-        fprintf('%20s:  %2d %2d %2d\n','left',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(1,:));
-        fprintf('%20s:  %2d %2d %2d\n','center',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(2,:));
-        fprintf('%20s:  %2d %2d %2d\n','right',p.functionHandles.displayConfig.(p.trial.condition.rewardedResponse)(3,:));
+        fprintf('%20s:  %4s %4s %4s\n','Configuration','S1','S2','S3');
+        for i=1:3
+            fprintf('%20s:  %4.2f %4.2f %4.2f\n',p.functionHandles.possibleResponses{i},p.trial.condition.symbolAlphas(i,:));
+        end
         fprintf('\n');
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  cleanUpandSave--post trial management; perform any steps that
         %  should happen upon completion of a trial such as performance
         %  tracking and trial index updating.
+        
+        %  Clean up sequence textures
+        Screen('Close',p.functionHandles.sequenceTextures);
         
         %  Capture data for this trial
         p.trial.trialRecord.stateTransitionLog = p.functionHandles.stateVariables.transitionLog;
@@ -200,15 +197,9 @@ switch state
         %  drawn. This is where all calls to Screen should be done.  Also,
         %  if there is a call to a function calling Screen, put it here!
         
+        %  For now we aren't cycling through the symbol phases
         if(p.functionHandles.showSymbols)
-            baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
-            for i=1:3
-                if(p.trial.condition.displayPositions(i,1))
-                    symbolCenter = p.functionHandles.geometry.symbolCenters(i,:);
-                    centeredRect = CenterRectOnPoint(baseRect,symbolCenter(1),symbolCenter(2));
-                    Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.symbolTextures(p.trial.condition.symbolIndices(i)),[],centeredRect);
-                end
-            end
+            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.sequenceTextures(1));
         end
         
         %  Draw the cursor (there is an internal check for cursor

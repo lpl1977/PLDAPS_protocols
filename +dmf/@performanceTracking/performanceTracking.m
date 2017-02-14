@@ -16,7 +16,7 @@ classdef performanceTracking < handle
     properties (Hidden)
         fields
         satisfiedRules
-        responses
+        possibleResponses
         abortMessages = cell(0);
         messageLength = 0;
     end
@@ -26,22 +26,22 @@ classdef performanceTracking < handle
         
         %  Class constructor
         %
-        %  use rewardedResponses array to initialize tracking properties
+        %  use possibleResponses array to initialize tracking properties
         function obj = performanceTracking(varargin)
             obj.satisfiedRules = varargin{1};
-            obj.responses = varargin{2};
-            obj.fields = cell(1+length(obj.responses),1);
+            obj.possibleResponses = varargin{2};
+            obj.fields = cell(1+length(obj.possibleResponses),1);
             obj.fields{1} = 'total';
-            obj.fields(2:end) = strcat(obj.responses,'_',obj.satisfiedRules);
+            obj.fields(2:end) = strcat(obj.possibleResponses,'_',obj.satisfiedRules);
             obj.satisfiedRules = unique(obj.satisfiedRules);
-            obj.responses = unique(obj.responses);
+            obj.possibleResponses = unique(obj.possibleResponses);
             for i=1:length(obj.fields)
                 obj.numTrialsAttempted.(obj.fields{i}) = 0;
                 obj.numTrialsCompleted.(obj.fields{i}) = 0;
                 obj.numCorrect.(obj.fields{i}) = 0;
-                obj.responseFrequency.(obj.fields{i}) = cell2struct(cell(size(obj.responses)),obj.responses,1);
-                for j=1:length(obj.responses)
-                    obj.responseFrequency.(obj.fields{i}).(obj.responses{j}) = 0;
+                obj.responseFrequency.(obj.fields{i}) = cell2struct(cell(size(obj.possibleResponses)),obj.possibleResponses,1);
+                for j=1:length(obj.possibleResponses)
+                    obj.responseFrequency.(obj.fields{i}).(obj.possibleResponses{j}) = 0;
                 end
             end
         end
@@ -99,15 +99,16 @@ classdef performanceTracking < handle
             fprintf('\n');
             
             %  Response frequencies
+            R = {'left','center','right'};
             fprintf('%*s:  ',textFieldWidth,'Response Frequencies');
-            for j=1:length(obj.responses)
-                fprintf('%-*s ',2*numFieldWidth+8,obj.responses{j});
+            for j=1:length(R)
+                fprintf('%-*s ',2*numFieldWidth+8,R{j});
             end
             fprintf('\n');
             for i=1:length(obj.fields)
                 fprintf('%*s:  ',textFieldWidth,strrep(obj.fields{i},'_',' '));
-                for j=1:length(obj.responses)
-                    fprintf('(%*d/%*d) %0.2f ',numFieldWidth,obj.responseFrequency.(obj.fields{i}).(obj.responses{j}),numFieldWidth,obj.numTrialsCompleted.(obj.fields{i}),obj.responseFrequency.(obj.fields{i}).(obj.responses{j})/max(1,obj.numTrialsCompleted.(obj.fields{i})));
+                for j=1:length(R)
+                    fprintf('(%*d/%*d) %0.2f ',numFieldWidth,obj.responseFrequency.(obj.fields{i}).(R{j}),numFieldWidth,obj.numTrialsCompleted.(obj.fields{i}),obj.responseFrequency.(obj.fields{i}).(R{j})/max(1,obj.numTrialsCompleted.(obj.fields{i})));
                 end
                 fprintf('\n');
             end
