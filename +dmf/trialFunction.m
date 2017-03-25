@@ -4,14 +4,7 @@ function p = trialFunction(p,state)
 
 %  **  ISSUES TO CONSIDER / THOUGHTS FOR REVISIONS
 
-%  ** The function adjustable_parameters can be edited during a pause in
-%  the task in order to change parameters between trials.
-%  dmf.adjustable_parameters(p);
-
-%  ** Create a more contained performance tracking Remember that each trial
-%  is stored as an element of the cell array p.data so anything you put
-%  into p.trial will be saved, for example p.trial.outcome
-
+%  **  Need a way of managing trials, blocking, and transitioning
 
 switch state
     
@@ -63,53 +56,50 @@ switch state
         %  to be done before a trial is started, for example preparing
         %  stimuli parameters
         
-        %  If this is the first trial, then set the trial indexing to 1.
-        %         if(p.trial.pldaps.iTrial == 1)
-        %             p.functionHandles.trialIndex = 1;
-        %             p.functionHandles.nTotalTrials = 0;
-        %             p.functionHandles.nCorrectTrials = 0;
-        %             p.functionHandles.nCompletedTrials = 0;
-        %         end
-        
         %  Condition from cell array
-        p.trial.condition = p.conditions{p.trial.pldaps.iTrial};
+        p.trial.condition = p.conditions{p.functionHandles.trialManagerObj.trialIndex};
         
         %  Initialize trial state variables
         p.functionHandles.stateVariables = stateControl('start');
         
-        %  Create textures for display
-        p.functionHandles.sequenceTextures = dmf.generateSequenceTextures(p);
-        
         %  Initialize trial outcome object
-        p.functionHandles.trialOutcome = dmf.outcome(p.trial.condition.satisfiedRule,p.trial.condition.rewardedResponse);
-                
+        p.functionHandles.trialOutcomeObj = dmf.outcome(...
+            'trialNumber',p.functionHandles.trialManagerObj.trialNumber,...
+            'selectionCode',p.trial.condition.selectionCode,...
+            'rewardedResponse',p.trial.condition.rewardedResponse,...
+            'repetitionNumber',p.functionHandles.trialManagerObj.repetitionNumber);
+                                
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
         p.functionHandles.showSymbols = false;
         p.functionHandles.showWarning = false;
         p.functionHandles.showEngage = false;
         p.functionHandles.showHold = false;
+        p.functionHandles.symbolPhase = 1;   
         
         %  Set any adjustable parameters
-        dmf.adjustableParameters(p,state);        
+        dmf.adjustableParameters(p,state);  
+                
+        %  All adjustments have been made before final steps before trial
+        %  start!        
+        
+        %  Create textures for display
+        p.functionHandles.sequenceTextures = dmf.generateSequenceTextures(p);
         
         %  Echo trial specs to screen
-        fprintf('TRIAL %d:\n',p.trial.pldaps.iTrial);
-        fprintf('%20s:\n','Symbols');
+        fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
+        fprintf('Completed %d of %d trials\n',p.functionHandles.trialManagerObj.trialNumber,p.functionHandles.trialManagerObj.maxTrials);
+        fprintf('Repetition %d of %d for current trial, alpha %0.3f\n',p.functionHandles.trialManagerObj.repetitionNumber,p.functionHandles.maxRepetitions,min(p.functionHandles.symbolAlphas.center(:)));
+        fprintf('%25s:\n','Symbols');
         for i=1:3
-            fprintf('%20s:  ',p.functionHandles.possibleResponses{i});
-            fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(i),1)});
-            fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(i),2)});
-            fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.functionHandles.sequenceObj.symbolCodes(p.trial.condition.symbolIndices(i),3)});
+            fprintf('%25s:  ',p.functionHandles.possibleResponses{i});
+            fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.trial.condition.sequenceSymbolCode(i,1)});
+            fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.trial.condition.sequenceSymbolCode(i,2)});
+            fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.trial.condition.sequenceSymbolCode(i,3)});
             fprintf('\n');
         end
-        fprintf('\n');
-        fprintf('%20s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
-        fprintf('%20s:  %s\n','Satisifed rule',p.trial.condition.satisfiedRule);
-        fprintf('%20s:  %4s %4s %4s\n','Configuration','S1','S2','S3');
-        for i=1:3
-            fprintf('%20s:  %4.2f %4.2f %4.2f\n',p.functionHandles.possibleResponses{i},p.trial.condition.symbolAlphas(i,:));
-        end
+        fprintf('%25s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
+        fprintf('%25s:  %s\n','Satisifed selection code',p.trial.condition.selectionCode);
         fprintf('\n');
         
     case p.trial.pldaps.trialStates.trialCleanUpandSave
@@ -124,20 +114,52 @@ switch state
         p.trial.trialRecord.stateTransitionLog = p.functionHandles.stateVariables.transitionLog;
         if(p.trial.pldaps.quit~=0)
             if(p.trial.pldaps.quit~=2)
-                p.functionHandles.trialOutcome.recordInterrupt('trialPaused');
+                p.functionHandles.trialOutcomeObj.recordInterrupt('trialPaused');
             else
-                p.functionHandles.trialOutcome.recordInterrupt('pldapsQuit');
+                p.functionHandles.trialOutcomeObj.recordInterrupt('pldapsQuit');
             end
         end
-        p.trial.trialRecord.outcome = p.functionHandles.trialOutcome.commit;
+        p.trial.trialRecord.outcome = p.functionHandles.trialOutcomeObj.commit;
         fprintf('\n');
         
         %  Track performance
-        p.functionHandles.performance.update(p.functionHandles.trialOutcome);
+        p.functionHandles.performanceTrackingObj.update(p.functionHandles.trialOutcomeObj);
         
-        %  Write perforamnce to screen
-        p.functionHandles.performance.output;
+        %  Update trial manager if trial completed; if trial aborted or
+        %  interrupted, repeat it.
+        if(p.functionHandles.trialOutcomeObj.trialCompleted)
+            
+            %  Here we can either update the trial manager (which causes us
+            %  to move on to the next trial) or repeat the trial; if he
+            %  correctly completed trial then move on, otherwise repeat
+            %  depending on trial manager.            
+            if(p.functionHandles.trialOutcomeObj.correct)
+                
+                %  Update trial manager, reset repetion count, and advance
+                %  to next trial
+                p.functionHandles.trialManagerObj.update;
+                
+                %  Write performance to screen
+                p.functionHandles.performanceTrackingObj.output;
+                fprintf('\n');                
+            elseif(p.functionHandles.trialManagerObj.repeatTrial)
+                fprintf('Due to incorrect response, monkey must repeat trial.\n');
+            else
+                
+                %  Since trial not completed correctly and not to be
+                %  repeated, shuffle back in and move on.
+                p.functionHandles.trialManagerObj.shuffleRemainingTrials;
+                fprintf('Trial not completed within allowed number of repetitions; shuffling into remaining trials.\n');
+            end        
+        else
+            fprintf('Trial aborted or interrupted; repeat trial without increment of repetition number.\n');
+        end
         fprintf('\n');
+        
+        %  Check run termination criteria
+        if(p.trial.pldaps.quit == 0)
+            p.trial.pldaps.quit = p.functionHandles.trialManagerObj.checkRunTerminationCriteria;
+        end
         
         %  Check if we have hit a termination condition
         if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
@@ -147,46 +169,6 @@ switch state
                 p.trial.pldaps.quit = 2;
             end
         end
-        
-        %         p.functionHandles.nTotalTrials = p.functionHandles.nTotalTrials + 1;
-        %         p.functionHandles.nCompletedTrials = p.functionHandles.nCompletedTrials + p.functionHandles.stateControl.trialCompleted;
-        %
-        %         if(p.functionHandles.stateControl.trialCompleted)
-        %             p.functionHandles.nCorrectTrials = p.functionHandles.nCorrectTrials + p.functionHandles.stateControl.trialCorrect;
-        %             p.functionHandles.performance.update(p.trial.condition.matchType,p.functionHandles.stateControl.response,p.functionHandles.stateControl.trialCorrect);
-        %         end
-        %
-        %         if(p.functionHandles.stateControl.trialCorrect)
-        %             fprintf('Monkey''s first choice, %s, was correct.\n',p.functionHandles.stateControl.response);
-        %             p.functionHandles.trialIndex = p.functionHandles.trialIndex + p.functionHandles.stateControl.trialCompleted;
-        %         else
-        %             if(p.functionHandles.stateControl.trialCompleted)
-        %                 fprintf('Monkey''s first first choice, %s, was incorrect; ',p.functionHandles.stateControl.response);
-        %                 if(unifrnd(0,1) < p.functionHandles.controlFlags.repeatErrorTrialLikelihood)
-        %                     fprintf('monkey will repeat this trial.\n');
-        %                 else
-        %                     fprintf('monkey will not repeat this trial.\n');
-        %                     p.functionHandles.trialIndex = p.functionHandles.trialIndex + p.functionHandles.stateControl.trialCompleted;
-        %                 end
-        %             else
-        %                 fprintf('Monkey did not complete the trial; monkey will repeat this trial.\n');
-        %             end
-        %         end
-        %
-        %         fprintf('Monkey received %0.2f of possible %0.2f in-region reward\n',p.functionHandles.stateControl.rewardInRegionReceived,p.functionHandles.reward.inRegion);
-        %
-        %         if(p.functionHandles.controlFlags.useReturnReward)
-        %             fprintf('Monkey received %0.2f of possible %0.2f return reward!\n',p.functionHandles.stateControl.rewardAtReturnReceived,p.functionHandles.reward.atReturn);
-        %         end
-        %         fprintf('\n');
-        %         fprintf('Current performance:\n');
-        %         fprintf('\t%d completed trials of %d total trials\n',p.functionHandles.nCompletedTrials,p.functionHandles.nTotalTrials);
-        %         fprintf('\t%d correct of %d completed trials (%0.2f)\n',p.functionHandles.nCorrectTrials,p.functionHandles.nCompletedTrials,p.functionHandles.nCorrectTrials/p.functionHandles.nCompletedTrials);
-        %
-        %         fprintf('\n');
-        %         p.functionHandles.performance.show;
-        %         fprintf('\n');
-        
         
         %%%%%%%%%%%%%%%%%%
         %  FRAME STATES  %
@@ -199,103 +181,23 @@ switch state
         
         %  For now we aren't cycling through the symbol phases
         if(p.functionHandles.showSymbols)
-            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.sequenceTextures(1));
+            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.sequenceTextures(p.functionHandles.symbolPhase));
         end
         
         %  Draw the cursor (there is an internal check for cursor
         %  visibility).
         if(p.functionHandles.showWarning)
-            fillColor = [0.8 0 0 1];
+            fillColor = [0.8 0 0];
         elseif(p.functionHandles.showEngage)
-            fillColor = [0 0.8 0 1];
+            fillColor = [0 0.8 0];
         elseif(p.functionHandles.showHold)
-            fillColor = [0.8 0.8 0.8 1];
+            fillColor = [0.8 0.8 0.8];
         else
-            fillColor = [0 0 0 0];
+            fillColor = [0 0 0];
         end
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
         screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);
         p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,'fillColor',fillColor);
-        
-        %  For now I don't think I need to make this customizable
-        %         center = p.functionHandles.geometry.center;
-        %         extent = p.functionHandles.geometry.extent;
-        %         [screenX,screenY] = analogStick.getScreenPosition(normX,0,center,extent);
-        %         analogStick.drawCursor(p,p.trial.display.ptr,[screenX screenY]);
-        
-        %         %  Geometry
-        %         xpos.left = p.trial.display.ctr(1)-p.functionHandles.displacement;
-        %         xpos.right = p.trial.display.ctr(1)+p.functionHandles.displacement;
-        %         xpos.center = p.trial.display.ctr(1);
-        %         ypos = p.trial.display.ctr(2);
-        %
-        %         xypos = [xpos.left ypos ; xpos.center ypos ; xpos.right ypos];
-        %
-        %
-        %
-        %         color = [p.trial.display.colors.(p.trial.condition.symbol.left.color) ; p.trial.display.colors.(p.trial.condition.symbol.center.color) ; p.trial.display.colors.(p.trial.condition.symbol.right.color)];
-        %
-        %         pattern = {p.trial.condition.symbol.left.pattern , p.trial.condition.symbol.center.pattern , p.trial.condition.symbol.right.pattern};
-        %
-        %         shape = {p.trial.condition.symbol.left.shape , p.trial.condition.symbol.center.shape, p.trial.condition.symbol.right.shape};
-        %
-        % *** Here I can make the call to Screen('DrawTextures')
-        
-        %                 color = p.trial.display.colors.(p.trial.condition.symbol.center.color);
-        %         pattern = p.trial.condition.symbol.center.mask;
-        %         shape = p.trial.condition.symbol.center.shape;
-        %Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.drawingFunctions.texturePointers.(pattern),xpos.center,ypos);
-        %         p.functionHandles.drawingFunctions.drawShapeTextures(p.trial.display.ptr,shape,color,xypos);
-        %         p.functionHandles.drawingFunctions.drawPatternMaskTextures(p.trial.display.ptr,pattern,xypos);
-        
-        
-        %  If stimuli are enabled, iterate over positions
-        %         if(p.functionHandles.stateControl.showStimuli)
-        %             pos = {'left','center','right'};
-        %             ix = zeros(3,1);
-        %             for pos = {'left','center','right'}
-        %
-        %             end
-        %         end
-        %                 %  Show symbols
-        %                 if(p.functionHandles.stateControl.showSymbol.(pos{:}))
-        %                     color = p.trial.display.colors.(p.trial.condition.symbol.(pos{:}).color);
-        %                     shape = p.trial.condition.symbol.(pos{:}).shape;
-        %                     mask = p.trial.condition.symbol.(pos{:}).mask;
-        %                     p.functionHandles.drawingFunctions.drawShape(p.trial.display.ptr,xpos.(pos{:}),ypos,color,shape);
-        %                      p.functionHandles.drawingFunctions.applyMask(p.trial.display.ptr,xpos.(pos{:}),ypos,mask)
-        %                 end
-        %
-        %                 %  Show reward regions
-        %                 if(p.functionHandles.controlFlags.useRewardRegions)
-        %                     selected = p.functionHandles.controlFlags.useSelectionColorChange && p.functionHandles.stateControl.trialCorrect && p.functionHandles.stateControl.rewardedResponse.(pos{:});
-        %                     p.functionHandles.drawingFunctions.drawRewardRegion(p.trial.display.ptr,xpos.(pos{:}),ypos,selected);
-        %                 end
-        
-        %                     if(p.functionHandles.controlFlags.useSelectionColorChange && strcmp(pos,'center') && p.functionHandles.controlFlags.useCenterRewardRegion && p.functionHandles.controlFlags.useCenterSelectionTimer)
-        %                         arcAngle = 360*max(0,min(1,(GetSecs-p.functionHandles.stateControl.timer(1))/p.functionHandles.timing.maxSelectionTime));
-        %                     elseif(p.functionHandles.controlFlags.useSelectionColorChange && (strcmp(pos,'center') && p.functionHandles.controlFlags.useCenterRewardRegion || ~strcmp(pos,'center')))
-        %                         arcAngle = 360*(p.functionHandles.stateControl.trialCorrect && p.functionHandles.stateControl.rewardedResponse.(pos{:}));
-        %                     else
-        %                         arcAngle = 0;
-        %                     end
-        %                 end
-        
-        %  Show reward indicator as secondary reinforcer
-        %                 if(p.functionHandles.controlFlags.useRewardIndicator)
-        %                     if(~p.functionHandles.stateControl.trialCompleted || (p.functionHandles.stateControl.trialCorrect && p.functionHandles.stateControl.rewardedResponse.(pos{:})))
-        %                         reinforcerRatio = max(0,min(1,1-p.functionHandles.stateControl.rewardElapsed/p.functionHandles.reward.maxDuration));
-        %                     elseif(~p.functionHandles.stateControl.trialCorrect && p.functionHandles.stateControl.rewardedResponse.(pos{:}))
-        %                         reinforcerRatio = 1;
-        %                     else
-        %                         reinforcerRatio = 0;
-        %                     end
-        %                     if(~strcmp(pos,'center') || p.functionHandles.controlFlags.useCenterRewardRegion)
-        %                         p.functionHandles.drawingFunctions.drawSecondaryReinforcer(p.trial.display.ptr,xpos.(pos{:}),ypos,reinforcerRatio);
-        %                     end
-        %                 end
-        %             end
-        %         end
         
         %  *******
         %  once you start putting a fixation spot in, you'll want to draw
@@ -324,8 +226,9 @@ switch state
         if(p.trial.ttime >= p.trial.pldaps.maxTrialLength)
             pds.audio.stop(p,'warning');
             pds.audio.stop(p,'incorrect');
+            pds.audio.stop(p,'reward');
             p.functionHandles.showWarning = false;
-            p.functionHandles.trialOutcome.recordAbort(p.functionHandles.stateVariables.currentState,'trialDurationElapsed');
+            p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'trialDurationElapsed');
             p.trial.flagNextTrial = true;
             fprintf('Monkey timed out...\n');
         end
@@ -399,7 +302,7 @@ switch state
                 %  the hold duration before the symbol appears.
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.holdDelay))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
-                    fprintf('\tMonkey will be required to hold the analog stick for %0.3f sec.\n',p.functionHandles.timing.holdDelay);
+                    fprintf('\tMonkey will be required to hold the analog stick for %5.3f sec.\n',p.functionHandles.stateVariables.timeRemainingInState);
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('engaged') && p.functionHandles.stateVariables.timeInStateElapsed)
                     fprintf('\tMonkey kept analog stick engaged for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'symbols';
@@ -420,6 +323,7 @@ switch state
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                     p.functionHandles.showSymbols = true;
+                    p.functionHandles.symbolPhase = 1;
                 else
                     p.functionHandles.showHold = false;
                     p.functionHandles.stateVariables.nextState = 'response';
@@ -439,6 +343,7 @@ switch state
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.responseDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                    fprintf('\tMonkey will have %5.3f sec to make his response.\n',p.functionHandles.stateVariables.timeRemainingInState);
                 end
                 
                 %  Proceed through time and position checks
@@ -446,7 +351,7 @@ switch state
                     
                     %  He has elapsed the maximum time allotted for his
                     %  response.  This is a trial abort.
-                    p.functionHandles.trialOutcome.recordAbort(p.functionHandles.stateVariables.currentState,'responseDurationElapsed');
+                    p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'responseDurationElapsed');
                     p.functionHandles.analogStickCursorObj.visible = false;
                     p.functionHandles.showSymbols = false;
                     p.functionHandles.stateVariables.nextState = 'penalty';
@@ -455,19 +360,27 @@ switch state
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('left'))
                     
                     %  Monkey has chosen left.  Record it and go on.
-                    p.functionHandles.trialOutcome.recordResponse('left');
-                    p.functionHandles.stateVariables.nextState = 'return';
+                    p.functionHandles.trialOutcomeObj.recordResponse('left');
+                    if(p.functionHandles.timing.commitDuration>0)
+                        p.functionHandles.stateVariables.nextState = 'commit';
+                    else
+                        p.functionHandles.stateVariables.nextState = 'return';
+                    end
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('right'))
                     
                     %  Monkey has chosen right.  Record it and go on.
-                    p.functionHandles.trialOutcome.recordResponse('right');
-                    p.functionHandles.stateVariables.nextState = 'return';
+                    p.functionHandles.trialOutcomeObj.recordResponse('right');
+                    if(p.functionHandles.timing.commitDuration>0)
+                        p.functionHandles.stateVariables.nextState = 'commit';
+                    else
+                        p.functionHandles.stateVariables.nextState = 'return';
+                    end
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('center'))
                     
                     %  Monkey has the analog stick in the center position.
                     %  He may still change his answer, so continue in this
                     %  state.
-                    p.functionHandles.trialOutcome.recordResponse('center');
+                    p.functionHandles.trialOutcomeObj.recordResponse('center');
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     
                     %  Monkey has relased the joystick.  Since we reached
@@ -476,6 +389,42 @@ switch state
                     %  window.  We'll handle that in the return state.
                     p.functionHandles.analogStickCursorObj.visible = false;
                     p.functionHandles.stateVariables.nextState = 'return';
+                end
+                
+            case 'commit'
+                
+                %  STATE:  commit
+                %
+                %  Monkey must hold a left or right response for a brief
+                %  time to commit to it.  If he drifts back to center then
+                %  go back to the response state and let him try again.  If
+                %  instead he releases the analog stick in that time it is
+                %  a trial abort.
+                
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.commitDuration))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                    fprintf('\tMonkey will be required to hold the analog stick for %5.3f sec.\n',p.functionHandles.stateVariables.timeRemainingInState);
+                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
+                    
+                    %  Monkey held analog stick in response window for long
+                    %  enough; he's committed now
+                    p.functionHandles.stateVariables.nextState = 'return';
+                elseif(p.functionHandles.analogStickWindowManager.inWindow('center'))
+                    
+                    %  Monkey allowed analog stick to drift back to center,
+                    %  so go back to response state
+                    p.functionHandles.trialOutcomeObj.recordResponse('center');
+                    p.functionHandles.stateVariables.nextState = 'response';
+                elseif(~p.functionHandles.analogStickWindowManager.inWindow(p.functionHandles.trialOutcomeObj.response))
+                    
+                    %  Monkey moved analog stick out of response window too
+                    %  quickly.  This is a trial abort.
+                    fprintf('\tMonkey moved analog stick out of response window; this is a trial abort.\n');
+                    p.functionHandles.analogStickCursorObj.visible = false;
+                    p.functionHandles.showSymbols = false;
+                    p.functionHandles.stateVariables.nextState = 'penalty';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
+                    p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'earlyRelease');
                 end
                 
             case 'return'
@@ -491,28 +440,28 @@ switch state
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                 end
                 
-                %  Turn the cursor off as soon as it leaves the engage
+                %  Turn the cursor off as soon as it leaves the response
                 %  window
-                if(~p.functionHandles.analogStickWindowManager.inWindow(p.functionHandles.trialOutcome.response) && p.functionHandles.analogStickCursorObj.visible)
+                if(~p.functionHandles.analogStickWindowManager.inWindow(p.functionHandles.trialOutcomeObj.response) && p.functionHandles.analogStickCursorObj.visible)
                     p.functionHandles.analogStickCursorObj.visible = false;
                 end
                 
                 %  When analog stick is in neutral position, extinguish the
                 %  symbols and score his response.
                 if(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
-                    fprintf('\tMonkey responded %s\n',p.functionHandles.trialOutcome.response);
+                    fprintf('\tMonkey responded %s\n',p.functionHandles.trialOutcomeObj.response);
                     p.functionHandles.showSymbols = false;
-                    if(p.functionHandles.trialOutcome.correct)
+                    if(p.functionHandles.trialOutcomeObj.correct)
                         fprintf('\tMonkey''s response was correct.\n');
                         p.functionHandles.stateVariables.nextState = 'reward';
-                    elseif(~p.functionHandles.trialOutcome.correct)
+                    elseif(~p.functionHandles.trialOutcomeObj.correct)
                         fprintf('\tMonkey''s response was incorrect.\n');
                         p.functionHandles.stateVariables.nextState = 'error';
                     else
                         fprintf('\tMonkey''s response was not valid.\n');
                         p.functionHandles.stateVariables.nextState = 'penalty';
                         p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                        p.functionHandles.trialOutcome.recordAbort(p.functionHandles.stateVariables.currentState,'invalidResponse');
+                        p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'invalidResponse');
                     end
                 end   
                 
@@ -525,6 +474,7 @@ switch state
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.rewardDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                    pds.audio.play(p,'reward',1);
                     
                     %  This section for a2duino managed reward
                     if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
@@ -533,6 +483,7 @@ switch state
                         pds.behavior.reward.give(p,p.functionHandles.reward);
                     end
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
+                    pds.audio.stop(p,'reward');
                     
                     %  Check to make sure the reward is not currently in
                     %  progress (only relevant for pellets)
@@ -577,266 +528,3 @@ switch state
         end
 end
 end
-
-%             case 'symbols'
-%
-%                 %  STATE:  symbols
-%                 %
-%                 %  Show the symbols until delay elapsed and as long as he
-%                 %  has joystick at center position.  If he moves the
-%                 %  joystick too early, go to abort penalty.
-%
-%                 if(p.functionHandles.stateControl.firstEntryIntoState)
-%                     fprintf('Entered %s state\n',upper(p.functionHandles.stateControl.nextTrialState));
-%                     p.functionHandles.stateControl.showStimuli = true;
-%                     p.functionHandles.stateControl.timer(1) = GetSecs + p.functionHandles.timing.interSymbolInterval;
-%                     p.functionHandles.stateControl.showSymbol.left = p.functionHandles.stateControl.displayPosition.left;
-%                     p.functionHandles.stateControl.showSymbol.right = p.functionHandles.stateControl.displayPosition.right;
-%                     p.functionHandles.stateControl.showSymbol.center = ~p.functionHandles.controlFlags.useInterSymbolInterval && p.functionHandles.stateControl.displayPosition.center;
-%                 elseif(~p.functionHandles.stateControl.joystickCenter)
-%                     p.functionHandles.stateControl.nextTrialState = 'penalty';
-%                     p.functionHandles.stateControl.penaltyDuration = p.functionHandles.timing.trialAbortPenalty;
-%                     p.functionHandles.stateControl.commitOutcome('trial abort');
-%                 elseif(GetSecs-p.functionHandles.stateControl.timer(1) >= 0)
-%                     p.functionHandles.stateControl.showSymbol.center = true;
-%                     p.functionHandles.stateControl.nextTrialState = 'response';
-%                 end
-%
-%             case 'response'
-%
-%                 %  STATE:  response
-%                 %
-%                 %  Now we wait for the monkey to make his response.
-%                 %
-%                 %  Enter this state with the cursor in the center.  Wait
-%                 %  the minimum selection time and then score his response;
-%                 %  if response is center, then wait for the maximum
-%                 %  selection time.  If cursor is not in a response region,
-%                 %  restart the minimum selection timer.
-%
-%                 if(p.functionHandles.stateControl.firstEntryIntoState)
-%                     fprintf('Entered %s state\n',upper(p.functionHandles.stateControl.nextTrialState));
-%
-%                     %  Set timers for minimum and maximum selection time
-%                     p.functionHandles.stateControl.timer(1) = GetSecs + p.functionHandles.timing.maxSelectionTime;
-%                     p.functionHandles.stateControl.timer(2) = GetSecs + p.functionHandles.timing.minSelectionTime;
-%                 elseif(~p.functionHandles.stateControl.joystickInRegion)
-%
-%                     %  If the monkey moves the cursour out of a reward
-%                     %  region, restart the minimum selection timer.
-%                     p.functionHandles.stateControl.timer(2) = GetSecs + p.functionHandles.timing.minSelectionTime;
-%                 elseif((GetSecs - p.functionHandles.stateControl.timer(2) >= 0) && (~p.functionHandles.stateControl.joystickCenter || (GetSecs - p.functionHandles.stateControl.timer(1) >= 0)))
-%
-%                     %  Since monkey has passed through the minimum
-%                     %  selection time, we know he has the cursor in a
-%                     %  region.  If it's not the center, then he's made his
-%                     %  choice.  If it is the center, then we have had to
-%                     %  wait for the maximum selection time before declaring
-%                     %  center his choice.  Now that we're here, we can
-%                     %  commit the outcome of the trial.
-%                     p.functionHandles.stateControl.commitOutcome;
-%                     fprintf('\tMonkey chose %s\n',p.functionHandles.stateControl.response);
-%                     if(p.functionHandles.stateControl.trialCorrect)
-%                         if(p.functionHandles.stateControl.joystickCenter)
-%
-%                             %  Start giving the monkey his reward
-%                             %  immediately if joystick is in center and
-%                             %  there is an at-return reward and he has not
-%                             %  incurred a penalty
-%                             if(~p.functionHandles.controlFlags.useOvershootPenalty || ~p.functionHandles.stateControl.joystickOvershot)
-%                                 p.functionHandles.stateControl.rewardUpdate(p.functionHandles.reward.maxDuration,0,0);
-%                                 pds.behavior.reward.give(p,p.functionHandles.reward.maxDuration);
-%                                 p.functionHandles.stateControl.timer(3) = GetSecs;
-%                                 p.functionHandles.stateControl.rewardInProgress = true;
-%                             end
-%                             p.functionHandles.stateControl.nextTrialState = 'postHarvestDelay';
-%                         else
-%
-%                             %  Start giving the monkey his reward
-%                             %  immediately if he has joystick in region and
-%                             %  there is an in-region reward and he has not
-%                             %  incurred a penalty
-%                             if(p.functionHandles.reward.inRegion > 0 && (~p.functionHandles.controlFlags.useOvershootPenalty || ~p.functionHandles.stateControl.joystickOvershot))
-%                                 p.functionHandles.stateControl.rewardUpdate(p.functionHandles.reward.inRegion,0,0);
-%                                 pds.behavior.reward.give(p,p.functionHandles.reward.inRegion);
-%                                 p.functionHandles.stateControl.timer(3) = GetSecs;
-%                                 p.functionHandles.stateControl.rewardInProgress = true;
-%                             end
-%                             p.functionHandles.stateControl.nextTrialState = 'harvestReward';
-%                         end
-%                     else
-%                         p.functionHandles.stateControl.nextTrialState = 'error';
-%                     end
-%                 end
-%
-%             case 'error'
-%
-%                 %  STATE:  error
-%                 %
-%                 %  Monkey has incorrectly made his choice.  Give him an
-%                 %  error tone, turn the cursor red, and then advance to the
-%                 %  penalty phase.  Note no need to deplete reward here
-%                 %  because we only update it if he got the right answer.
-%
-%                 if(p.functionHandles.stateControl.firstEntryIntoState)
-%                     fprintf('Entered %s state\n',upper(p.functionHandles.stateControl.nextTrialState));
-%                     p.functionHandles.stateControl.timer(1) = GetSecs + p.functionHandles.timing.errorDuration;
-%                     p.trial.analog_stick.cursor.color = [1 0 0];
-%                     p.trial.analog_stick.cursor.linewidth = 12;
-%                     p.trial.analog_stick.cursor.height = 40;
-%                     pds.audio.play(p,'incorrect',1);
-%                     p.functionHandles.stateControl.rewardInRegionReceived = 0;
-%                     p.functionHandles.stateControl.rewardAtReturnReceived = 0;
-%                 elseif(GetSecs - p.functionHandles.stateControl.timer(1) >= 0)
-%                     pds.audio.stop(p,'incorrect');
-%                     p.functionHandles.stateControl.penaltyDuration = p.functionHandles.timing.errorPenalty;
-%                     p.functionHandles.stateControl.nextTrialState = 'penalty';
-%                 end
-%
-%             case 'harvestReward'
-%
-%                 %  STATE:  harvestReward
-%                 %
-%                 %  Monkey has correctly made his choice.  He may have begun
-%                 %  to receive his reward on the last frame cycle and will
-%                 %  continue to receive whatever reward is alocated for
-%                 %  being in the region. Whenever the cursor is not over the
-%                 %  reward region, he loses reward. He may lose all his
-%                 %  reward based on some penalties assesed during this
-%                 %  state; for now this is only the overshoot penalty.
-%
-%                 if(p.functionHandles.stateControl.firstEntryIntoState)
-%                     fprintf('Entered %s state\n',upper(p.functionHandles.stateControl.nextTrialState));
-%                     p.functionHandles.stateControl.timer(1) = GetSecs;
-%                 end
-%
-%                 %  On every cycle through this state, we will need to check
-%                 %  for the joystick overshoot penalty.  If he's made it,
-%                 %  then drain his reward.
-%                 if(p.functionHandles.controlFlags.useOvershootPenalty && p.functionHandles.stateControl.joystickOvershot)
-%                     rewardRemaining = p.functionHandles.stateControl.rewardRemaining;
-%                     p.functionHandles.stateControl.rewardUpdate(-rewardRemaining,0,rewardRemaining);
-%                 end
-%
-%                 %  Monkey could still have been receiving reward, so update
-%                 %  amount of reward received and elapsed in last frame
-%                 %  cycle.
-%                 if(p.functionHandles.stateControl.rewardRemaining > 0);
-%                     elapsedReward = GetSecs - p.functionHandles.stateControl.timer(3);
-%                     p.functionHandles.stateControl.timer(3) = GetSecs;
-%                     if(p.functionHandles.stateControl.rewardInProgress)
-%                         p.functionHandles.stateControl.rewardUpdate(-elapsedReward,elapsedReward,elapsedReward);
-%                     else
-%                         p.functionHandles.stateControl.rewardUpdate(-elapsedReward,0,elapsedReward);
-%                     end
-%                 elseif(p.functionHandles.stateControl.rewardInProgress)
-%                     pds.behavior.reward.give(p,0);
-%                     p.functionHandles.stateControl.rewardInProgress = false;
-%                 end
-%
-%                 %  Based on current joystick position, determine what
-%                 %  reward he should be getting in the next frame cycle
-%                 if(p.functionHandles.stateControl.joystickCenter)
-%
-%                     %  Once he gets the cursor all the way back to center
-%                     %  then shave off whatever is remaining of the
-%                     %  in-region reward and go on to the post harvest
-%                     %  delay.  If he has an at-return reward and he has not
-%                     %  incurred a penalty, then start it here.
-%                     p.functionHandles.stateControl.rewardUpdate(-p.functionHandles.stateControl.rewardRemaining,0,p.functionHandles.stateControl.rewardRemaining);
-%                     if(p.functionHandles.reward.atReturn > 0 && (~p.functionHandles.controlFlags.useOvershootPenalty || ~p.functionHandles.stateControl.joystickOvershot))
-%                         p.functionHandles.stateControl.rewardUpdate(p.functionHandles.reward.atReturn,0,0);
-%                         pds.behavior.reward.give(p,p.functionHandles.reward.atReturn);
-%                         p.functionHandles.stateControl.rewardInProgress = true;
-%                     end
-%                     p.functionHandles.stateControl.rewardInRegionReceived = p.functionHandles.stateControl.rewardReceived;
-%                     p.functionHandles.stateControl.nextTrialState = 'postHarvestDelay';
-%                 elseif(~p.functionHandles.stateControl.joystickInRewardedRegion && p.functionHandles.stateControl.rewardInProgress)
-%
-%                     %  If cursor is out of the rewarded region and he's
-%                     %  receiving reward, then immediately stop giving him
-%                     %  reward.
-%                     pds.behavior.reward.give(p,0);
-%                     p.functionHandles.stateControl.rewardInProgress = false;
-%                 elseif(p.functionHandles.stateControl.joystickInRewardedRegion && ~p.functionHandles.stateControl.rewardInProgress && p.functionHandles.stateControl.rewardRemaining > 0)
-%
-%                     %  Monkey may have temporarily moved the cursor out of
-%                     %  the rewarded region and then back into the rewarded
-%                     %  region before reaching center.  If that's the case,
-%                     %  and he still has reward to get, then restart his
-%                     %  reward.
-%                     pds.behavior.reward.give(p,p.functionHandles.stateControl.rewardRemaining);
-%                     p.functionHandles.stateControl.rewardInProgress = true;
-%                 end
-%
-%             case 'postHarvestDelay'
-%
-%                 %  STATE:  postHarvestDelay
-%                 %
-%                 %  After the harvest, monkey gets to look at the
-%                 %  stimuli for just a moment longer.  If he is due a return
-%                 %  reward, he will get it here.  Also, he only enters this
-%                 %  state if the cursor is in center.  If he moves the
-%                 %  cursor out of the center then he forfeits the rest of
-%                 %  his reward.
-%
-%                 if(p.functionHandles.stateControl.firstEntryIntoState)
-%                     fprintf('Entered %s state\n',upper(p.functionHandles.stateControl.nextTrialState));
-%                     p.functionHandles.stateControl.timer(1) = GetSecs + p.functionHandles.timing.postRewardDelay;
-%                 end
-%
-%                 %  Since monkey could still be receiving reward, update
-%                 %  amount of reward received and elapsed in last frame
-%                 %  cycle
-%                 if(p.functionHandles.stateControl.rewardRemaining > 0)
-%                     elapsedReward = GetSecs - p.functionHandles.stateControl.timer(3);
-%                     p.functionHandles.stateControl.timer(3) = GetSecs;
-%                     if(p.functionHandles.stateControl.rewardInProgress)
-%                         p.functionHandles.stateControl.rewardUpdate(-elapsedReward,elapsedReward,elapsedReward);
-%                     else
-%                         p.functionHandles.stateControl.rewardUpdate(-elapsedReward,0,elapsedReward);
-%                     end
-%                 elseif(p.functionHandles.stateControl.rewardInProgress)
-%                     pds.behavior.reward.give(p,0);
-%                     p.functionHandles.stateControl.rewardInProgress = false;
-%                 end
-%
-%                 %  Determine if the monkey should continue receiving reward
-%                 %  on the next frame cycle.
-%                 if(~p.functionHandles.stateControl.joystickCenter)
-%
-%                     %  If the monkey moves the joystick back out of center
-%                     %  then clear his reward.
-%                     p.functionHandles.stateControl.rewardUpdate(-p.functionHandles.stateControl.rewardRemaining,0,p.functionHandles.stateControl.rewardRemaining);
-%                     if(p.functionHandles.stateControl.rewardInProgress)
-%                         pds.behavior.reward.give(p,0);
-%                         p.functionHandles.stateControl.rewardInProgress = false;
-%                     end
-%                 elseif(p.functionHandles.stateControl.rewardRemaining <= 0 && GetSecs - p.functionHandles.stateControl.timer(1) >= 0)
-%
-%                     %  If time has elapsed and monkeys got whatever reward
-%                     %  he's going to get, then move on.
-%                     p.functionHandles.stateControl.rewardAtReturnReceived = p.functionHandles.stateControl.rewardReceived - p.functionHandles.stateControl.rewardInRegionReceived;
-%                     p.trial.flagNextTrial = true;
-%                 end
-%
-%             case 'penalty'
-%
-%                 %  STATE:  penalty
-%                 %
-%                 %  Monkey has entered this state because he incurred a
-%                 %  penalty on the trial.  Blank the screen and wait for the
-%                 %  penalty to elapse.
-%
-%                 if(p.functionHandles.stateControl.firstEntryIntoState)
-%                     fprintf('Entered %s state\n',upper(p.functionHandles.stateControl.nextTrialState));
-%                     p.functionHandles.stateControl.timer(1) = GetSecs + p.functionHandles.stateControl.penaltyDuration;
-%                     p.functionHandles.stateControl.showCursor = false;
-%                     p.functionHandles.stateControl.showStimuli = false;
-%                 elseif(GetSecs - p.functionHandles.stateControl.timer(1) >= 0)
-%                     fprintf('Completed %d ms error penalty.\n',1000*p.functionHandles.stateControl.penaltyDuration);
-%                     p.trial.flagNextTrial = true;
-%                 end
-%         end
-% end
-% end

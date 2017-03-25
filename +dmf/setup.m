@@ -39,6 +39,10 @@ p.functionHandles.features.nSpatialCycles = 16;
 p.functionHandles.features.nThetaCycles = 8;
 p.functionHandles.features.bgColor = p.trial.display.bgColor;
 
+%  symbolAlphas
+p.functionHandles.symbolAlphas = struct('left',[],'center',[],'right',[]);
+
+
 %  Set subject dependent parameters
 dmf.adjustableParameters(p);
 
@@ -48,27 +52,31 @@ dmf.adjustableParameters(p);
 
 %  Possibilities currently defined:
 %  colors:  {'blue','orange','yellow','purple','green','cyan','scarlet'}
-%  patterns:  {'dots','spiral','horizontalLines','verticalLines','waffle','concentricCircles'}
+%  patterns:  {'dots','spiral','horizontalLines','verticalLines','waffle','concentricCircles','solid'}
 %  shapes:  {'circle','square','diamond','triangle','pentagon','hexagon'}
 
 colors = {'blue','scarlet','yellow'};
-patterns = {'waffle','concentricCircles','spiral'};
+patterns = {'solid'};
 shapes = {'triangle','diamond','pentagon'};
 
 p.functionHandles.sequenceObj = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 
-[~,colorSequenceCodes.left,colorSatisfiedRules.left] = p.functionHandles.sequenceObj.selector('100');
-[~,colorSequenceCodes.right,colorSatisfiedRules.right] = p.functionHandles.sequenceObj.selector('300');
-[~,colorSequenceCodes.center,colorSatisfiedRules.center] = p.functionHandles.sequenceObj.selector({'000','400'}); 
+[selectedSequences.left,sequenceSymbolCodes.left,selectionCodes.left] = p.functionHandles.sequenceObj.selector('140');
+[selectedSequences.right,sequenceSymbolCodes.right,selectionCodes.right] = p.functionHandles.sequenceObj.selector('340');
+[selectedSequences.center,sequenceSymbolCodes.center,selectionCodes.center] = p.functionHandles.sequenceObj.selector({'040','240','440'}); 
 
-nSequencesPerResponse = lcm(lcm(size(colorSequenceCodes.left,1),size(colorSequenceCodes.right,1)),size(colorSequenceCodes.center,1));
-colorSequenceCodes.left = repmat(colorSequenceCodes.left,nSequencesPerResponse/size(colorSequenceCodes.left,1),1);
-colorSequenceCodes.right = repmat(colorSequenceCodes.right,nSequencesPerResponse/size(colorSequenceCodes.right,1),1);
-colorSequenceCodes.center = repmat(colorSequenceCodes.center,nSequencesPerResponse/size(colorSequenceCodes.center,1),1);
+nSequencesPerResponse = lcm(lcm(size(selectedSequences.left,1),size(selectedSequences.right,1)),size(selectedSequences.center,1));
+selectedSequences.left = repmat(selectedSequences.left,nSequencesPerResponse/size(selectedSequences.left,1),1);
+selectedSequences.right = repmat(selectedSequences.right,nSequencesPerResponse/size(selectedSequences.right,1),1);
+selectedSequences.center = repmat(selectedSequences.center,nSequencesPerResponse/size(selectedSequences.center,1),1);
 
-colorSatisfiedRules.left = repmat(colorSatisfiedRules.left,nSequencesPerResponse/size(colorSatisfiedRules.left,1),1);
-colorSatisfiedRules.right = repmat(colorSatisfiedRules.right,nSequencesPerResponse/size(colorSatisfiedRules.right,1),1);
-colorSatisfiedRules.center = repmat(colorSatisfiedRules.center,nSequencesPerResponse/size(colorSatisfiedRules.center,1),1);
+selectionCodes.left = repmat(selectionCodes.left,nSequencesPerResponse/size(selectionCodes.left,1),1);
+selectionCodes.right = repmat(selectionCodes.right,nSequencesPerResponse/size(selectionCodes.right,1),1);
+selectionCodes.center = repmat(selectionCodes.center,nSequencesPerResponse/size(selectionCodes.center,1),1);
+
+sequenceSymbolCodes.left = repmat(sequenceSymbolCodes.left,nSequencesPerResponse/size(sequenceSymbolCodes.left,1),1);
+sequenceSymbolCodes.right = repmat(sequenceSymbolCodes.right,nSequencesPerResponse/size(sequenceSymbolCodes.right,1),1);
+sequenceSymbolCodes.center = repmat(sequenceSymbolCodes.center,nSequencesPerResponse/size(sequenceSymbolCodes.center,1),1);
 
 p.functionHandles.possibleResponses = {'left','center','right'};
 if(~isfield(p.functionHandles,'includedResponses'))
@@ -78,232 +86,27 @@ end
 c = cell(nSequencesPerResponse*numel(p.functionHandles.includedResponses),1);
 for i=1:length(p.functionHandles.includedResponses)
     for j=1:nSequencesPerResponse
-        c{(i-1)*nSequencesPerResponse+j}.symbolIndices = colorSequenceCodes.(p.functionHandles.includedResponses{i})(j,:);
+        c{(i-1)*nSequencesPerResponse+j}.selectedSequence = selectedSequences.(p.functionHandles.includedResponses{i})(j,:);
+        c{(i-1)*nSequencesPerResponse+j}.sequenceSymbolCode = sequenceSymbolCodes.(p.functionHandles.includedResponses{i}){j};
         c{(i-1)*nSequencesPerResponse+j}.rewardedResponse = p.functionHandles.includedResponses{i};
-        c{(i-1)*nSequencesPerResponse+j}.satisfiedRule = colorSatisfiedRules.(p.functionHandles.includedResponses{i}){j};
-        c{(i-1)*nSequencesPerResponse+j}.symbolAlphas = p.functionHandles.symbolAlphas.(p.functionHandles.includedResponses{i});
+        c{(i-1)*nSequencesPerResponse+j}.selectionCode = selectionCodes.(p.functionHandles.includedResponses{i}){j};
     end
 end
-p.conditions = Shuffle(c); 
-p.trial.pldaps.finish = length(p.conditions);
+p.conditions = Shuffle(c);
+p.conditions = repmat(p.conditions,2,1);
+
+%  Session termination criteria--set finish to Inf because we are using the
+%  trial manager
+p.trial.pldaps.finish = Inf;
+
+%  Initialize trial management
+p.functionHandles.trialManagerObj = trialManager('maxTrials',numel(c),'maxRepetitions',p.functionHandles.maxRepetitions);
 
 %  Initialize performance tracking
-satisfiedRules = [];
-possibleResponses = [];
-for i=1:length(p.functionHandles.possibleResponses)
-    temp = unique(colorSatisfiedRules.(p.functionHandles.possibleResponses{i}));
-    satisfiedRules = [satisfiedRules; temp];
-    possibleResponses = [possibleResponses; repmat(p.functionHandles.possibleResponses(i),numel(temp),1)];
-end
-p.functionHandles.performance = dmf.performanceTracking(satisfiedRules,possibleResponses);
-
-
-% leftColorMatchTrials{i}.symbol.(pos{j}).color = leftColorSequences{i,j}{1};
-% leftColorMatchTrials{i}.symbol.(pos{j}).pattern = leftColorSequences{i,j}{2};
-
-% 
-% leftColorSequences = S.selector('300');
-% nColorSequences = size(leftColorSequences,1);
-% leftMaskSequences = S.selector('030');
-% nMaskSequences = size(leftMaskSequences,1);
-% leftShapeSequences = S.selector('003');
-% nShapeSequences = size(leftShapeSequences,1);
-% 
-% rightColorSequences = S.selector('200');
-% rightMaskSequences = S.selector('020');
-% rightShapeSequences = S.selector('002');
-% 
-% NonMatchSequences = S.selector('000');
-% nNonMatchSequences = size(NonMatchSequences,1);
-
-%p.functionHandles.sequences = S;
-
-% S = sequence.generator(colors,patterns,shapes);
-% leftColorSequences = sequence.selector(S,'300');
-% nColorSequences = size(leftColorSequences,1);
-% leftMaskSequences = sequence.selector(S,'030');
-% nMaskSequences = size(leftMaskSequences,1);
-% leftShapeSequences = sequence.selector(S,'003');
-% nShapeSequences = size(leftShapeSequences,1);
-% 
-% rightColorSequences = sequence.selector(S,'200');
-% rightMaskSequences = sequence.selector(S,'020');
-% rightShapeSequences = sequence.selector(S,'002');
-% 
-% NonMatchSequences = sequence.selector(S,'000');
-% nNonMatchSequences = size(NonMatchSequences,1);
-% 
-% pos = {'right', 'left','center'};
-% 
-% %  COLOR MATCH CONDITIONS
-% leftColorMatchTrials = cell(nColorSequences,1);
-% rightColorMatchTrials = cell(nColorSequences,1);
-% for i=1:nColorSequences
-%     for j=1:3
-%         leftColorMatchTrials{i}.symbol.(pos{j}).color = leftColorSequences{i,j}{1};
-%         leftColorMatchTrials{i}.symbol.(pos{j}).pattern = leftColorSequences{i,j}{2};
-%         leftColorMatchTrials{i}.symbol.(pos{j}).shape = leftColorSequences{i,j}{3};
-%         rightColorMatchTrials{i}.symbol.(pos{j}).color = rightColorSequences{i,j}{1};
-%         rightColorMatchTrials{i}.symbol.(pos{j}).pattern = rightColorSequences{i,j}{2};
-%         rightColorMatchTrials{i}.symbol.(pos{j}).shape = rightColorSequences{i,j}{3};
-%     end
-%     leftColorMatchTrials{i}.rewardedResponse = 'left';
-%     leftColorMatchTrials{i}.matchType = 'left color';
-%     leftColorMatchTrials{i}.displayPosition.left = true;
-%     leftColorMatchTrials{i}.displayPosition.center = true;
-%     leftColorMatchTrials{i}.displayPosition.right = false;    
-%     rightColorMatchTrials{i}.rewardedResponse = 'right';
-%     rightColorMatchTrials{i}.matchType = 'right color';
-%     rightColorMatchTrials{i}.displayPosition.left = false;
-%     rightColorMatchTrials{i}.displayPosition.center = true;
-%     rightColorMatchTrials{i}.displayPosition.right = true;
+% uniqueSequenceCodes = [];
+% for i=1:length(p.functionHandles.possibleResponses)
+%     temp = unique(selectionCodes.(p.functionHandles.possibleResponses{i}));
+%     uniqueSequenceCodes = [uniqueSequenceCodes; strcat('code',temp)];
 % end
-
-% %  SHAPE MATCH CONDITIONS
-% ShapeMatchTrials = cell(2*nShapeSequences,1);
-% for i=1:nShapeSequences
-%     for j=1:3
-%         ShapeMatchTrials{i}.symbol.(pos{j}).color = leftShapeSequences{i,j}{1};
-%         ShapeMatchTrials{i}.symbol.(pos{j}).mask = leftShapeSequences{i,j}{2};
-%         ShapeMatchTrials{i}.symbol.(pos{j}).shape = leftShapeSequences{i,j}{3};        
-%         ShapeMatchTrials{i+nShapeSequences}.symbol.(pos{j}).color = rightShapeSequences{i,j}{1};
-%         ShapeMatchTrials{i+nShapeSequences}.symbol.(pos{j}).mask = rightShapeSequences{i,j}{2};
-%         ShapeMatchTrials{i+nShapeSequences}.symbol.(pos{j}).shape = rightShapeSequences{i,j}{3};
-%     end    
-%     ShapeMatchTrials{i}.rewardedResponse = 'left';
-%     ShapeMatchTrials{i}.matchType = 'shape';
-%     ShapeMatchTrials{i}.displayPosition.left = true;
-%     ShapeMatchTrials{i}.displayPosition.center = true;
-%     ShapeMatchTrials{i}.displayPosition.right = false;    
-%     ShapeMatchTrials{i+nShapeSequences}.rewardedResponse = 'right';
-%     ShapeMatchTrials{i+nShapeSequences}.matchType = 'shape';
-%     ShapeMatchTrials{i+nShapeSequences}.displayPosition.left = false;
-%     ShapeMatchTrials{i+nShapeSequences}.displayPosition.center = true;
-%     ShapeMatchTrials{i+nShapeSequences}.displayPosition.right = true;
-% end
-% 
-% %  MASK MATCH CONDITIONS
-% MaskMatchTrials = cell(2*nMaskSequences,1);
-% for i=1:nMaskSequences
-%     for j=1:3
-%         MaskMatchTrials{i}.symbol.(pos{j}).color = leftMaskSequences{i,j}{1};
-%         MaskMatchTrials{i}.symbol.(pos{j}).mask = leftMaskSequences{i,j}{2};
-%         MaskMatchTrials{i}.symbol.(pos{j}).shape = leftMaskSequences{i,j}{3};
-%         MaskMatchTrials{i+nMaskSequences}.symbol.(pos{j}).color = rightMaskSequences{i,j}{1};
-%         MaskMatchTrials{i+nMaskSequences}.symbol.(pos{j}).mask = rightMaskSequences{i,j}{2};
-%         MaskMatchTrials{i+nMaskSequences}.symbol.(pos{j}).shape = rightMaskSequences{i,j}{3};
-%     end
-%     MaskMatchTrials{i}.rewardedResponse = 'left';
-%     MaskMatchTrials{i}.matchType = 'mask';
-%     MaskMatchTrials{i}.displayPosition.left = true;
-%     MaskMatchTrials{i}.displayPosition.center = true;
-%     MaskMatchTrials{i}.displayPosition.right = false;    
-%     MaskMatchTrials{i+nMaskSequences}.rewardedResponse = 'right';
-%     MaskMatchTrials{i+nMaskSequences}.matchType = 'mask';
-%     MaskMatchTrials{i+nMaskSequences}.displayPosition.left = false;
-%     MaskMatchTrials{i+nMaskSequences}.displayPosition.center = true;
-%     MaskMatchTrials{i+nMaskSequences}.displayPosition.right = true;    
-% end
-% 
-% %  NON MATCH TRIALS
-% leftNonMatchTrials = cell(nNonMatchSequences,1);
-% rightNonMatchTrials = cell(nNonMatchSequences,1);
-% for i=1:nNonMatchSequences
-%     for j=1:3
-%         leftNonMatchTrials{i}.symbol.(pos{j}).color = NonMatchSequences{i,j}{1};
-%         leftNonMatchTrials{i}.symbol.(pos{j}).pattern = NonMatchSequences{i,j}{2};
-%         leftNonMatchTrials{i}.symbol.(pos{j}).shape = NonMatchSequences{i,j}{3};
-%         rightNonMatchTrials{i}.symbol.(pos{j}).color = NonMatchSequences{i,j}{1};
-%         rightNonMatchTrials{i}.symbol.(pos{j}).pattern = NonMatchSequences{i,j}{2};
-%         rightNonMatchTrials{i}.symbol.(pos{j}).shape = NonMatchSequences{i,j}{3};
-%     end
-%     leftNonMatchTrials{i}.rewardedResponse = 'center';
-%     leftNonMatchTrials{i}.matchType = 'left catch';
-%     leftNonMatchTrials{i}.displayPosition.left = true;
-%     leftNonMatchTrials{i}.displayPosition.center = true;
-%     leftNonMatchTrials{i}.displayPosition.right = false;
-%     rightNonMatchTrials{i}.rewardedResponse = 'center';
-%     rightNonMatchTrials{i}.matchType = 'right catch';
-%     rightNonMatchTrials{i}.displayPosition.left = false;
-%     rightNonMatchTrials{i}.displayPosition.center = true;
-%     rightNonMatchTrials{i}.displayPosition.right = true;
-% end
-% 
-% %  Group trials together for desired task combination
-% 
-% %  Blocks will include equal numbers of match and non-match trials per
-% %  side.
-% 
-% %  Shuffle the trials within their class
-% leftColorMatchTrials = Shuffle(leftColorMatchTrials);
-% rightColorMatchTrials = Shuffle(rightColorMatchTrials);
-% leftNonMatchTrials = Shuffle(leftNonMatchTrials);
-% rightNonMatchTrials = Shuffle(rightNonMatchTrials);
-% 
-% %  Generate blocking index
-% leftBlockIndex = repmat(1:2:2*27,8,1);
-% leftBlockIndex = leftBlockIndex(:);
-% rightBlockIndex = repmat(2:2:2*27,8,1);
-% rightBlockIndex = rightBlockIndex(:);
-% for i=1:nColorSequences
-%     leftColorMatchTrials{i}.blockIndex = leftBlockIndex(i);
-%     rightColorMatchTrials{i}.blockIndex = rightBlockIndex(i);
-%     leftNonMatchTrials{i}.blockIndex = leftBlockIndex(i);
-%     rightNonMatchTrials{i}.blockIndex = rightBlockIndex(i);
-% end
-% 
-% c = cell(0,1);
-% for i=1:2:2*27
-%     ix1 = leftBlockIndex==i;
-%     ix2 = rightBlockIndex==(i+1);
-%         cTemp1 = Shuffle([leftColorMatchTrials(ix1) ; leftNonMatchTrials(ix1)]);
-%         cTemp2 = Shuffle([rightColorMatchTrials(ix2) ; rightNonMatchTrials(ix2)]);
-%     c = [c ; cTemp1 ; cTemp2];
-% end
-% 
-% % %  This is the color and non-match combination with equal number of trials
-% % %  in which the symbols are a left-side pair and a right-side pair for both
-% % %  color and non-match 
-% % nTrialsPerGroup = lcm(nColorSequences,nNonMatchSequences);
-% % c = [repmat(ColorMatchTrials,nTrialsPerGroup/nNonMatchSequences,1) ; repmat(NonMatchTrials,nTrialsPerGroup/nColorSequences,1)];
-% 
-
-
-%  Set up for performance tracking
-%p.functionHandles.performance = dmf.performance(p.conditions,'matchType','rewardedResponse');
-
-% %  Reward
-% p.functionHandles.reward = 0.3;
-% 
-% %  Timing
-% p.functionHandles.timing.errorPenalty = 2;
-% p.functionHandles.timing.errorDuration = 0.7;  %  This is the duration of the incorrect tone
-% p.functionHandles.timing.minSymbolDelay = 0.5;
-
-% p.functionHandles.timing.maxSymbolDelay = 4;
-% if(p.functionHandles.controlFlags.useInterSymbolInterval)
-%     p.functionHandles.timing.interSymbolInterval = 0.5;
-% else
-%     p.functionHandles.timing.interSymbolInterval = 0;
-% end
-
-% p.functionHandles.timing.minSelectionTime = 2*p.trial.display.ifi;  %  Target will be short maybe 250 msec?
-% p.functionHandles.timing.maxSelectionTime = max(5,p.functionHandles.timing.minSelectionTime);
-% p.functionHandles.timing.trialAbortPenalty = 2;
-% p.functionHandles.timing.minStartDelay = 0.5;
-% p.functionHandles.timing.maxStartDelay = 1.0;
-% p.functionHandles.timing.responseDuration = 10;
-% p.functionHandles.timing.rewardDuration = 0.5;
-% p.functionHandles.timing.errorDuration = p.functionHandles.timing.rewardDuration;
-% p.functionHandles.timing.errorPenaltyDuration = 2;
-% p.functionHandles.timing.invalidResponsePenaltyDuration = 5;
-
-% p.functionHandles.features.rewardRegionBuffer = 50;
-% p.functionHandles.features.rewardRegionPenWidth = 12;
-% p.functionHandles.features.rewardRegionBorderColor = [0.75 0.75 0.75];
-% p.functionHandles.features.rewardRegionSelectedBorderColor = [0.25 0.25 0.25];
-% p.functionHandles.features.secondaryReinforcerWidth = 250;
-% p.functionHandles.features.secondaryReinforcerHeight = 30;
-% p.functionHandles.features.secondaryReinforcerBorderColor = [0.375 0.375 0.375];
-% p.functionHandles.features.secondaryReinforcerInteriorColor = [127 255 212]/255;
-% p.functionHandles.features.secondaryReinforcerPenWidth = 4;
+p.functionHandles.performanceTrackingObj = dmf.performanceTracking(...
+    'trackedOutcomes',{'140','340','040','240','440'});

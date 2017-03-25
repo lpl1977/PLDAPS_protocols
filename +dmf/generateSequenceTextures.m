@@ -8,8 +8,8 @@ function sequenceTextures = generateSequenceTextures(p)
 
 %  Extract components of input structure
 symbolCenters = p.functionHandles.geometry.symbolCenters;
-symbolAlphas = p.trial.condition.symbolAlphas;
-symbolIndices = p.trial.condition.symbolIndices;
+symbolAlphas = p.functionHandles.symbolAlphas.(p.trial.condition.rewardedResponse);
+selectedSequence = p.trial.condition.selectedSequence;
 symbolTextures = p.functionHandles.symbolTextures;
 baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
 bgColor = p.functionHandles.features.bgColor;
@@ -25,6 +25,6 @@ for i=1:3
     for j=1:3
         alpha = symbolAlphas(j,i);
         centeredRect = CenterRectOnPoint(baseRect,symbolCenters(j,1),symbolCenters(j,2));
-        Screen('DrawTexture',sequenceTextures(i),symbolTextures(symbolIndices(j)),[],centeredRect,[],[],alpha);
+        Screen('DrawTexture',sequenceTextures(i),symbolTextures(selectedSequence(j)),[],centeredRect,[],[],alpha);
     end
 end
