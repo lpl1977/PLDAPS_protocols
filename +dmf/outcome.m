@@ -7,8 +7,6 @@ classdef outcome < handle
     
     properties (SetAccess = private)
         trialNumber
-        repetitionNumber = 0;
-        selectionCode
         response
         responseTime
         rewardedResponse
@@ -18,16 +16,13 @@ classdef outcome < handle
         abortMessage
         trialInterrupted = false;
         interruptMessage
+        correctionLoopTrial
+        selectionCode
     end
     
     properties (Dependent)
         correct
         trialCompleted
-    end
-    
-    properties (Hidden)
-        responseLog = struct('response',[],'responseTime',[],'correct',[]);
-        numResponses = 0;
     end
     
     methods
@@ -39,39 +34,32 @@ classdef outcome < handle
             end
         end
         
-        %  trial response
-        function obj = recordResponse(obj,response)
-            obj.response = response;
-            obj.responseTime = GetSecs;
-            
-            obj.numResponses = obj.numResponses+1;
-            obj.responseLog.response{obj.numResponses} = obj.response;
-            obj.responseLog.responseTime(obj.numResponses) = obj.responseTime;
-            obj.responseLog.correct(obj.numResponses) = obj.correct;
-
+        %  recordResponse
+        function obj = recordResponse(obj,varargin)
+            for i=1:2:nargin-1
+                obj.(varargin{i}) = varargin{i+1};
+            end
             obj.trialAborted = false;
             obj.trialInterrupted = false;
         end
         
-        %  Trial aborts
+        %  recordAborts
         function obj = recordAbort(obj,varargin)
-            obj.abortState = varargin{1};
             obj.trialAborted = true;
-            obj.abortTime = GetSecs;
-            if(nargin > 1)
-                obj.abortMessage = varargin{2};
+            for i=1:2:nargin-1
+                obj.(varargin{i}) = varargin{i+1};
             end
         end
         
-        %  Trial interrupts
+        %  recordInterrupts
         function obj = recordInterrupt(obj,varargin)
             obj.trialInterrupted = true;
-            if(nargin>1)
-                obj.interruptMessage = varargin{1};
+            for i=1:2:nargin-1
+                obj.(varargin{i}) = varargin{i+1};
             end
         end
         
-        %  Trial correct?
+        %  Get function for correct
         function outcome = get.correct(obj)
             if(isempty(obj.response))
                 outcome = [];
@@ -80,20 +68,18 @@ classdef outcome < handle
             end
         end
         
-        %  Trial completed?
+        %  Get function for trialCompleted
         function outcome = get.trialCompleted(obj)
             outcome = ~(obj.trialAborted || obj.trialInterrupted);
-        end
-                
+        end                
         
         %  commit
         %
         %  commit the trial outcome to output
         function output = commit(obj)
             output.trialNumber = obj.trialNumber;
-            output.selectionCode = obj.selectionCode;
             output.rewardedResponse = obj.rewardedResponse;
-            output.repetitionNumber = obj.repetitionNumber;
+            output.correctionLoopTrial = obj.correctionLoopTrial;
             if(obj.trialAborted)
                 output.abortState = obj.abortState;
                 output.abortTime = obj.abortTime;
@@ -104,7 +90,6 @@ classdef outcome < handle
                 output.response = obj.response;
                 output.correct = obj.correct;
             end
-            output.responseLog = obj.responseLog;
         end
     end    
 end

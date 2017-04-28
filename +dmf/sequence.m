@@ -25,6 +25,7 @@ classdef sequence < handle
     
     properties
         features
+        featureNames
         symbolCodes
         sequences
     end
@@ -42,11 +43,11 @@ classdef sequence < handle
             end
             
             %  Determine number of examples of each feature
-            fieldNames = fieldnames(obj.features);
-            nFeatures = length(fieldNames);
+            obj.featureNames = fieldnames(obj.features);
+            nFeatures = length(obj.featureNames);
             nExamples = zeros(nFeatures,1);
             for i=1:nFeatures
-                nExamples(i) = length(obj.features.(fieldNames{i}));
+                nExamples(i) = length(obj.features.(obj.featureNames{i}));
             end
             
             %  Generate a list of all possible combinations of features
@@ -63,7 +64,7 @@ classdef sequence < handle
         %  Select possible sequences based on selection codes.  If multiple
         %  codes are provided then the output will reflect all sequences
         %  that satisfy at least one of the codes.
-        function [selectedSequences,sequenceSymbolCodes,satisfiedSelectionCodes] = selector(obj,selectionCodes)
+        function [selectedSequences,sequenceSymbolCodes,satisfiedSelectionCodes,matchedFeatures] = selector(obj,selectionCodes)
             
             %  Number of sequences, selectionCodes, and features
             nSequences = size(obj.sequences,1);
@@ -71,14 +72,15 @@ classdef sequence < handle
                 selectionCodes = {selectionCodes};
             end
             
-            %  Short names for the sake of simplicity
-            symb = obj.symbolCodes;
-            seq = obj.sequences;
-            
             %  Create logical index vector indicating satisfaction of the
             %  UNION of the selection codes.
             indx = false(nSequences,1);
+            
+            %  Track which selection codes were satisfied
             satisfiedSelectionCodes = cell(nSequences,1);
+            
+            %  Track matched features
+            matchedFeatures = cell(nSequences,1);
             
             %  Apply the selection codes sequentially to each feature of
             %  each sequence
@@ -88,18 +90,22 @@ classdef sequence < handle
                     j = j+1;
                     k = 1;
                     indx(i) = true;
-                    while indx(i) && k<=min(length(selectionCodes{j}),size(symb,2))
+                    while indx(i) && k<=min(length(selectionCodes{j}),size(obj.symbolCodes,2))
                         switch selectionCodes{j}(k)
                             case '0'
-                                indx(i) = symb(seq(i,1),k)~=symb(seq(i,2),k) && symb(seq(i,1),k)~=symb(seq(i,3),k) && symb(seq(i,2),k)~=symb(seq(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)~=obj.symbolCodes(obj.sequences(i,3),k);
                             case '1'
-                                indx(i) = symb(seq(i,1),k)==symb(seq(i,2),k) && symb(seq(i,1),k)~=symb(seq(i,3),k) && symb(seq(i,2),k)~=symb(seq(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)~=obj.symbolCodes(obj.sequences(i,3),k);
                             case '2'
-                                indx(i) = symb(seq(i,1),k)~=symb(seq(i,2),k) && symb(seq(i,1),k)==symb(seq(i,3),k) && symb(seq(i,2),k)~=symb(seq(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)~=obj.symbolCodes(obj.sequences(i,3),k);
                             case '3'
-                                indx(i) = symb(seq(i,1),k)~=symb(seq(i,2),k) && symb(seq(i,1),k)~=symb(seq(i,3),k) && symb(seq(i,2),k)==symb(seq(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)==obj.symbolCodes(obj.sequences(i,3),k);
                             case '4'
-                                indx(i) = symb(seq(i,1),k)==symb(seq(i,2),k) && symb(seq(i,1),k)==symb(seq(i,3),k) && symb(seq(i,2),k)==symb(seq(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)==obj.symbolCodes(obj.sequences(i,3),k);
+                        end
+                        switch selectionCodes{j}(k)
+                            case {'1','2','3'}
+                                matchedFeatures{i}{end+1} = obj.features.(obj.featureNames{k}){obj.symbolCodes(obj.sequences(i,2),k)};
                         end
                         k = k+1;
                     end
@@ -110,6 +116,7 @@ classdef sequence < handle
             %  Generate list of selected sequences
             selectedSequences = obj.sequences(indx,:);
             satisfiedSelectionCodes = satisfiedSelectionCodes(indx);
+            matchedFeatures = matchedFeatures(indx);
             sequenceSymbolCodes = cell(sum(indx),1);
             for i=1:length(sequenceSymbolCodes)
                 sequenceSymbolCodes{i} = zeros(size(selectedSequences,2),size(obj.symbolCodes,2));
@@ -117,7 +124,7 @@ classdef sequence < handle
                     sequenceSymbolCodes{i}(j,:) = obj.symbolCodes(selectedSequences(i,j),:);
                 end
             end
-        end        
+        end
     end
     
     methods (Static)
@@ -131,7 +138,7 @@ classdef sequence < handle
         %
         %  Output:
         %  A--matrix containing all possible combination of indices into
-        %  the lists.  A is prod(N) by N.        
+        %  the lists.  A is prod(N) by N.
         function A = comblist(nExamples)
             
             %  Number of lists

@@ -61,9 +61,9 @@ shapes = {'triangle','diamond','pentagon'};
 
 p.functionHandles.sequenceObj = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 
-[selectedSequences.left,sequenceSymbolCodes.left,selectionCodes.left] = p.functionHandles.sequenceObj.selector('140');
-[selectedSequences.right,sequenceSymbolCodes.right,selectionCodes.right] = p.functionHandles.sequenceObj.selector('340');
-[selectedSequences.center,sequenceSymbolCodes.center,selectionCodes.center] = p.functionHandles.sequenceObj.selector({'040','240','440'}); 
+[selectedSequences.left,sequenceSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.sequenceObj.selector('140');
+[selectedSequences.right,sequenceSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.sequenceObj.selector('340');
+[selectedSequences.center,sequenceSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.sequenceObj.selector({'040','240','440'}); 
 
 nSequencesPerResponse = lcm(lcm(size(selectedSequences.left,1),size(selectedSequences.right,1)),size(selectedSequences.center,1));
 selectedSequences.left = repmat(selectedSequences.left,nSequencesPerResponse/size(selectedSequences.left,1),1);
@@ -78,6 +78,10 @@ sequenceSymbolCodes.left = repmat(sequenceSymbolCodes.left,nSequencesPerResponse
 sequenceSymbolCodes.right = repmat(sequenceSymbolCodes.right,nSequencesPerResponse/size(sequenceSymbolCodes.right,1),1);
 sequenceSymbolCodes.center = repmat(sequenceSymbolCodes.center,nSequencesPerResponse/size(sequenceSymbolCodes.center,1),1);
 
+matchedFeatures.left = repmat(matchedFeatures.left,nSequencesPerResponse/size(matchedFeatures.left,1),1);
+matchedFeatures.right = repmat(matchedFeatures.right,nSequencesPerResponse/size(matchedFeatures.right,1),1);
+matchedFeatures.center = repmat(matchedFeatures.center,nSequencesPerResponse/size(matchedFeatures.center,1),1);
+
 p.functionHandles.possibleResponses = {'left','center','right'};
 if(~isfield(p.functionHandles,'includedResponses'))
     p.functionHandles.includedResponses = unique(p.functionHandles.possibleResponses);
@@ -90,17 +94,19 @@ for i=1:length(p.functionHandles.includedResponses)
         c{(i-1)*nSequencesPerResponse+j}.sequenceSymbolCode = sequenceSymbolCodes.(p.functionHandles.includedResponses{i}){j};
         c{(i-1)*nSequencesPerResponse+j}.rewardedResponse = p.functionHandles.includedResponses{i};
         c{(i-1)*nSequencesPerResponse+j}.selectionCode = selectionCodes.(p.functionHandles.includedResponses{i}){j};
+        c{(i-1)*nSequencesPerResponse+j}.matchedFeatures = matchedFeatures.(p.functionHandles.includedResponses{i}){j};
     end
 end
-p.conditions = Shuffle(c);
-p.conditions = repmat(p.conditions,2,1);
+p.conditions = cell(numel(c)*3,1);
 
 %  Session termination criteria--set finish to Inf because we are using the
 %  trial manager
 p.trial.pldaps.finish = Inf;
 
 %  Initialize trial management
-p.functionHandles.trialManagerObj = trialManager('maxTrials',numel(c),'maxRepetitions',p.functionHandles.maxRepetitions);
+p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'minSequentialCorrects',1);
+p.functionHandles.trialManagerObj.tokenize('selectionCode','matchedFeatures');
+%p.functionHandles.trialManagerObj.tokenize('rewardedResponse','selectionCode','matchedFeatures');
 
 %  Initialize performance tracking
 % uniqueSequenceCodes = [];

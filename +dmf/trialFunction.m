@@ -4,11 +4,9 @@ function p = trialFunction(p,state)
 
 %  **  ISSUES TO CONSIDER / THOUGHTS FOR REVISIONS
 
-%  **  Need a way of managing trials, blocking, and transitioning
-
 switch state
     
-    case p.trial.pldaps.trialStates.experimentPostOpenScreen        
+    case p.trial.pldaps.trialStates.experimentPostOpenScreen
         %  experimentPostOpenScreen--executed once after screen has been
         %  opened.
         
@@ -18,14 +16,15 @@ switch state
         p.functionHandles.analogStickObj.pHeight = 0;
         
         %  Now put some windows in; these are the defaults and can be
-        %  modified later
+        %  modified later.  Width of the center window is the symbol
+        %  diameter.
         p.functionHandles.geometry.horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
-        p.functionHandles.geometry.centerWindow = p.functionHandles.geometry.symbolDisplacement / p.functionHandles.analogStickObj.pWidth;
-        p.functionHandles.analogStickWindowManager.addWindow('neutral',[-p.functionHandles.geometry.centerWindow -0.5 p.functionHandles.geometry.centerWindow 0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-p.functionHandles.geometry.centerWindow -1 p.functionHandles.geometry.centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('center',[-p.functionHandles.geometry.centerWindow -1 p.functionHandles.geometry.centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -p.functionHandles.geometry.centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('right',[p.functionHandles.geometry.centerWindow -1 1 -0.5]);
+        p.functionHandles.geometry.centerWindow = 2*p.functionHandles.geometry.symbolRadius / p.functionHandles.geometry.horizontalSpan; %analogStickObj.pWidth;
+        p.functionHandles.analogStickWindowManager.addWindow('neutral',[-0.5*p.functionHandles.geometry.centerWindow -0.5 0.5*p.functionHandles.geometry.centerWindow 0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-0.5*p.functionHandles.geometry.centerWindow -1 0.5*p.functionHandles.geometry.centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('center',[-0.5*p.functionHandles.geometry.centerWindow -1 0.5*p.functionHandles.geometry.centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -0.5*p.functionHandles.geometry.centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('right',[0.5*p.functionHandles.geometry.centerWindow -1 1 -0.5]);
         
         %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
@@ -57,7 +56,8 @@ switch state
         %  stimuli parameters
         
         %  Condition from cell array
-        p.trial.condition = p.conditions{p.functionHandles.trialManagerObj.trialIndex};
+        %p.trial.condition = p.conditions{p.functionHandles.trialManagerObj.trialIndex};
+        p.trial.condition = p.functionHandles.trialManagerObj.nextTrial;
         
         %  Initialize trial state variables
         p.functionHandles.stateVariables = stateControl('start');
@@ -65,31 +65,34 @@ switch state
         %  Initialize trial outcome object
         p.functionHandles.trialOutcomeObj = dmf.outcome(...
             'trialNumber',p.functionHandles.trialManagerObj.trialNumber,...
-            'selectionCode',p.trial.condition.selectionCode,...
             'rewardedResponse',p.trial.condition.rewardedResponse,...
-            'repetitionNumber',p.functionHandles.trialManagerObj.repetitionNumber);
-                                
+            'correctionLoopTrial',p.functionHandles.trialManagerObj.inCorrectionLoop,...
+            'selectionCode',p.trial.condition.selectionCode);
+        
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
         p.functionHandles.showSymbols = false;
         p.functionHandles.showWarning = false;
         p.functionHandles.showEngage = false;
         p.functionHandles.showHold = false;
-        p.functionHandles.symbolPhase = 1;   
+        p.functionHandles.symbolPhase = 1;
         
         %  Set any adjustable parameters
-        dmf.adjustableParameters(p,state);  
-                
-        %  All adjustments have been made before final steps before trial
-        %  start!        
+        dmf.adjustableParameters(p,state);
+        
+        %  All adjustments should have been made before final steps and
+        %  before trial start!
         
         %  Create textures for display
         p.functionHandles.sequenceTextures = dmf.generateSequenceTextures(p);
         
         %  Echo trial specs to screen
         fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
-        fprintf('Completed %d of %d trials\n',p.functionHandles.trialManagerObj.trialNumber,p.functionHandles.trialManagerObj.maxTrials);
-        fprintf('Repetition %d of %d for current trial, alpha %0.3f\n',p.functionHandles.trialManagerObj.repetitionNumber,p.functionHandles.maxRepetitions,min(p.functionHandles.symbolAlphas.center(:)));
+        if(~p.functionHandles.trialManagerObj.inCorrectionLoop)
+            fprintf('Completed %d of %d trials\n',p.functionHandles.trialManagerObj.trialNumber,p.functionHandles.trialManagerObj.maxTrials);
+        else
+            fprintf('Correction loop trial %d for %stokenized trials\n',p.functionHandles.trialManagerObj.correctionLoopTrialNumber,sprintf('%s ',p.functionHandles.trialManagerObj.correctionLoopTokens{:}));
+        end
         fprintf('%25s:\n','Symbols');
         for i=1:3
             fprintf('%25s:  ',p.functionHandles.possibleResponses{i});
@@ -114,9 +117,11 @@ switch state
         p.trial.trialRecord.stateTransitionLog = p.functionHandles.stateVariables.transitionLog;
         if(p.trial.pldaps.quit~=0)
             if(p.trial.pldaps.quit~=2)
-                p.functionHandles.trialOutcomeObj.recordInterrupt('trialPaused');
+                p.functionHandles.trialOutcomeObj.recordInterrupt(...
+                    'interruptMessage','trialPaused');
             else
-                p.functionHandles.trialOutcomeObj.recordInterrupt('pldapsQuit');
+                p.functionHandles.trialOutcomeObj.recordInterrupt(...
+                    'interruptMessage','pldapsQuit');
             end
         end
         p.trial.trialRecord.outcome = p.functionHandles.trialOutcomeObj.commit;
@@ -128,37 +133,41 @@ switch state
         %  Update trial manager if trial completed; if trial aborted or
         %  interrupted, repeat it.
         if(p.functionHandles.trialOutcomeObj.trialCompleted)
-            
-            %  Here we can either update the trial manager (which causes us
-            %  to move on to the next trial) or repeat the trial; if he
-            %  correctly completed trial then move on, otherwise repeat
-            %  depending on trial manager.            
-            if(p.functionHandles.trialOutcomeObj.correct)
-                
-                %  Update trial manager, reset repetion count, and advance
-                %  to next trial
-                p.functionHandles.trialManagerObj.update;
+            if(~p.functionHandles.trialManagerObj.inCorrectionLoop)
                 
                 %  Write performance to screen
                 p.functionHandles.performanceTrackingObj.output;
-                fprintf('\n');                
-            elseif(p.functionHandles.trialManagerObj.repeatTrial)
-                fprintf('Due to incorrect response, monkey must repeat trial.\n');
+                fprintf('\n');
+                
+                %  Check correction loop entry
+                p.functionHandles.trialManagerObj.checkCorrectionLoopEntry(p.functionHandles.trialOutcomeObj.correct);
+                if(p.functionHandles.trialManagerObj.inCorrectionLoop)
+                    fprintf('Entering correction loop for %stokenized trials\n',sprintf('%s ',p.functionHandles.trialManagerObj.correctionLoopTokens{:}));
+                end
             else
                 
-                %  Since trial not completed correctly and not to be
-                %  repeated, shuffle back in and move on.
-                p.functionHandles.trialManagerObj.shuffleRemainingTrials;
-                fprintf('Trial not completed within allowed number of repetitions; shuffling into remaining trials.\n');
-            end        
+                %  Check correction loop exit
+                p.functionHandles.trialManagerObj.checkCorrectionLoopExit(p.functionHandles.trialOutcomeObj.correct);
+                if(p.functionHandles.trialManagerObj.inCorrectionLoop)
+                    fprintf('Continue correction loop with %d of %d sequential correct responses made.\n',...
+                        p.functionHandles.trialManagerObj.sequentialCorrects,p.functionHandles.trialManagerObj.minSequentialCorrects);
+                else
+                    fprintf('Monkey made %d sequential correct responses; exit correction loop.\n',p.functionHandles.trialManagerObj.minSequentialCorrects);
+                end
+            end
         else
-            fprintf('Trial aborted or interrupted; repeat trial without increment of repetition number.\n');
+            fprintf('Trial aborted or interrupted.\n');
+            p.functionHandles.trialManagerObj.repeatTrial;
         end
         fprintf('\n');
         
         %  Check run termination criteria
         if(p.trial.pldaps.quit == 0)
             p.trial.pldaps.quit = p.functionHandles.trialManagerObj.checkRunTerminationCriteria;
+        else
+            %  Write performance to screen
+            p.functionHandles.performanceTrackingObj.output;
+            fprintf('\n');
         end
         
         %  Check if we have hit a termination condition
@@ -228,7 +237,10 @@ switch state
             pds.audio.stop(p,'incorrect');
             pds.audio.stop(p,'reward');
             p.functionHandles.showWarning = false;
-            p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'trialDurationElapsed');
+            p.functionHandles.trialOutcomeObj.recordAbort(...
+                'abortState',p.functionHandles.stateVariables.currentState,...
+                'abortMessage','trialDurationElapsed',...
+                'abortTime',GetSecs);
             p.trial.flagNextTrial = true;
             fprintf('Monkey timed out...\n');
         end
@@ -337,9 +349,9 @@ switch state
                 %
                 %  Enter this state with the cursor in the engaged state.
                 %  He may either release the joystick or move the joystick
-                %  left or right.  He chooses center by letting the
-                %  joystick go with the cursor over the center.  Otherwise
-                %  his choice is whichever window he reaches.
+                %  left or right.  His default response is center.  He
+                %  chooses center by allowing the joystick to return to
+                %  neutral without first choosing left or right.
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.responseDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
@@ -351,7 +363,10 @@ switch state
                     
                     %  He has elapsed the maximum time allotted for his
                     %  response.  This is a trial abort.
-                    p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'responseDurationElapsed');
+                    p.functionHandles.trialOutcomeObj.recordAbort(...
+                        'abortState',p.functionHandles.stateVariables.currentState,...
+                        'abortMessage','responseDurationElapsed',...
+                        'abortTime',GetSecs);
                     p.functionHandles.analogStickCursorObj.visible = false;
                     p.functionHandles.showSymbols = false;
                     p.functionHandles.stateVariables.nextState = 'penalty';
@@ -360,71 +375,27 @@ switch state
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('left'))
                     
                     %  Monkey has chosen left.  Record it and go on.
-                    p.functionHandles.trialOutcomeObj.recordResponse('left');
-                    if(p.functionHandles.timing.commitDuration>0)
-                        p.functionHandles.stateVariables.nextState = 'commit';
-                    else
-                        p.functionHandles.stateVariables.nextState = 'return';
-                    end
+                    p.functionHandles.trialOutcomeObj.recordResponse(...
+                        'response','left',...
+                        'responseTime',GetSecs);
+                    p.functionHandles.stateVariables.nextState = 'return';
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('right'))
                     
                     %  Monkey has chosen right.  Record it and go on.
-                    p.functionHandles.trialOutcomeObj.recordResponse('right');
-                    if(p.functionHandles.timing.commitDuration>0)
-                        p.functionHandles.stateVariables.nextState = 'commit';
-                    else
-                        p.functionHandles.stateVariables.nextState = 'return';
-                    end
-                elseif(p.functionHandles.analogStickWindowManager.inWindow('center'))
-                    
-                    %  Monkey has the analog stick in the center position.
-                    %  He may still change his answer, so continue in this
-                    %  state.
-                    p.functionHandles.trialOutcomeObj.recordResponse('center');
-                elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                    
-                    %  Monkey has relased the joystick.  Since we reached
-                    %  this case, he either relased from the center
-                    %  position or from a position outside a response
-                    %  window.  We'll handle that in the return state.
-                    p.functionHandles.analogStickCursorObj.visible = false;
+                    p.functionHandles.trialOutcomeObj.recordResponse(...
+                        'response','right',...
+                        'responseTime',GetSecs);
                     p.functionHandles.stateVariables.nextState = 'return';
-                end
-                
-            case 'commit'
-                
-                %  STATE:  commit
-                %
-                %  Monkey must hold a left or right response for a brief
-                %  time to commit to it.  If he drifts back to center then
-                %  go back to the response state and let him try again.  If
-                %  instead he releases the analog stick in that time it is
-                %  a trial abort.
-                
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.commitDuration))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
-                    fprintf('\tMonkey will be required to hold the analog stick for %5.3f sec.\n',p.functionHandles.stateVariables.timeRemainingInState);
-                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
+                elseif(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
                     
-                    %  Monkey held analog stick in response window for long
-                    %  enough; he's committed now
+                    %  Monkey has released the analog stick and it has
+                    %  returned to the neutral position.  His response is
+                    %  center because he never reached left or right
+                    %  windows.
+                    p.functionHandles.trialOutcomeObj.recordResponse(...
+                        'response','center',...
+                        'responseTime',GetSecs);
                     p.functionHandles.stateVariables.nextState = 'return';
-                elseif(p.functionHandles.analogStickWindowManager.inWindow('center'))
-                    
-                    %  Monkey allowed analog stick to drift back to center,
-                    %  so go back to response state
-                    p.functionHandles.trialOutcomeObj.recordResponse('center');
-                    p.functionHandles.stateVariables.nextState = 'response';
-                elseif(~p.functionHandles.analogStickWindowManager.inWindow(p.functionHandles.trialOutcomeObj.response))
-                    
-                    %  Monkey moved analog stick out of response window too
-                    %  quickly.  This is a trial abort.
-                    fprintf('\tMonkey moved analog stick out of response window; this is a trial abort.\n');
-                    p.functionHandles.analogStickCursorObj.visible = false;
-                    p.functionHandles.showSymbols = false;
-                    p.functionHandles.stateVariables.nextState = 'penalty';
-                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                    p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'earlyRelease');
                 end
                 
             case 'return'
@@ -432,17 +403,17 @@ switch state
                 %  STATE:  return
                 %
                 %  Monkey has either made a choice or allowed the analog
-                %  stick to leave the center window.  He can no longer
-                %  alter his choice and must return the analog stick to the
-                %  neutral position before he can get his reward.
+                %  stick to return to the neutral position.  He can no
+                %  longer alter his choice and must return the analog stick
+                %  to the neutral position before he can get his reward.
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                 end
                 
-                %  Turn the cursor off as soon as it leaves the response
+                %  Turn the cursor off as soon as it's left the response
                 %  window
-                if(~p.functionHandles.analogStickWindowManager.inWindow(p.functionHandles.trialOutcomeObj.response) && p.functionHandles.analogStickCursorObj.visible)
+                if(~p.functionHandles.analogStickWindowManager.inWindow(p.functionHandles.trialOutcomeObj.response))
                     p.functionHandles.analogStickCursorObj.visible = false;
                 end
                 
@@ -454,16 +425,11 @@ switch state
                     if(p.functionHandles.trialOutcomeObj.correct)
                         fprintf('\tMonkey''s response was correct.\n');
                         p.functionHandles.stateVariables.nextState = 'reward';
-                    elseif(~p.functionHandles.trialOutcomeObj.correct)
+                    else
                         fprintf('\tMonkey''s response was incorrect.\n');
                         p.functionHandles.stateVariables.nextState = 'error';
-                    else
-                        fprintf('\tMonkey''s response was not valid.\n');
-                        p.functionHandles.stateVariables.nextState = 'penalty';
-                        p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                        p.functionHandles.trialOutcomeObj.recordAbort(p.functionHandles.stateVariables.currentState,'invalidResponse');
                     end
-                end   
+                end
                 
             case 'reward'
                 
@@ -491,7 +457,7 @@ switch state
                         p.functionHandles.rewardManagerObj.checkRewardStatus;
                         if(~p.functionHandles.rewardManagerObj.releaseInProgress)
                             p.trial.flagNextTrial = true;
-                        end
+                        end        
                     else
                         p.trial.flagNextTrial = true;
                     end
