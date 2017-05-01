@@ -12,6 +12,8 @@ function analogStickCalibration = calibrate(p)
 %  January 2017
 
 daq = p.trial.analogStick.dataSource;
+horizontalChannel = p.trial.analogStick.horizontalChannel;
+verticalChannel = p.trial.analogStick.verticalChannel;
 fields = textscan(daq,'%s','delimiter','.');
 daq = fields{1}{1};
 
@@ -26,7 +28,7 @@ for i=1:6
 end
 for i=1:6
     subplot(2,6,i);
-    plot(p.data{i}.(daq).adc.data(1,:),p.data{i}.(daq).adc.data(2,:));
+    plot(p.data{i}.(daq).adc.data(horizontalChannel,:),p.data{i}.(daq).adc.data(verticalChannel,:));
     axis([minval maxval minval maxval]);
     grid on;
     axis square;
@@ -39,14 +41,14 @@ end
 ix = 4001:9000;
 
 %  Extract center (0,0)
-horizontalOffset = mean(p.data{1}.(daq).adc.data(1,ix));
-verticalOffset = mean(p.data{1}.(daq).adc.data(2,ix));
+horizontalOffset = mean(p.data{1}.(daq).adc.data(horizontalChannel,ix));
+verticalOffset = mean(p.data{1}.(daq).adc.data(verticalChannel,ix));
 
 %  Bounds
-left = mean(p.data{2}.(daq).adc.data(1,ix));
-right = mean(p.data{3}.(daq).adc.data(1,ix));
-up = mean(p.data{4}.(daq).adc.data(2,ix));
-down = mean(p.data{5}.(daq).adc.data(2,ix));
+left = mean(p.data{2}.(daq).adc.data(horizontalChannel,ix));
+right = mean(p.data{3}.(daq).adc.data(horizontalChannel,ix));
+up = mean(p.data{4}.(daq).adc.data(verticalChannel,ix));
+down = mean(p.data{5}.(daq).adc.data(verticalChannel,ix));
 
 horizontalGain = 1/min(abs(left-horizontalOffset),abs(right-horizontalOffset));
 verticalGain = 1/min(abs(up-verticalOffset),abs(down-verticalOffset));
@@ -61,7 +63,7 @@ save(filename,'-struct','analogStickCalibration');
 
 
 subplot(2,2,3);
-plot(min(1,max(-1,horizontalGain*(p.data{i}.(daq).adc.data(1,:)-horizontalOffset))),min(1,max(-1,verticalGain*(p.data{i}.(daq).adc.data(2,:)-verticalOffset))));
+plot(min(1,max(-1,horizontalGain*(p.data{i}.(daq).adc.data(horizontalChannel,:)-horizontalOffset))),min(1,max(-1,verticalGain*(p.data{i}.(daq).adc.data(verticalChannel,:)-verticalOffset))));
 axis([-1.25 1.25 -1.25 1.25]);
 grid on;
 axis square;
@@ -71,7 +73,7 @@ title(lab{i});
 
 subplot(2,2,4);
 
-plot(0.5*p.trial.display.pWidth*min(1,max(-1,horizontalGain*(p.data{i}.(daq).adc.data(1,:)-horizontalOffset)))+959.5,0.5*p.trial.display.pHeight*min(1,max(-1,verticalGain*(p.data{i}.(daq).adc.data(2,:)-verticalOffset)))+539.5);
+plot(0.5*p.trial.display.pWidth*min(1,max(-1,horizontalGain*(p.data{i}.(daq).adc.data(horizontalChannel,:)-horizontalOffset)))+959.5,0.5*p.trial.display.pHeight*min(1,max(-1,verticalGain*(p.data{i}.(daq).adc.data(verticalChannel,:)-verticalOffset)))+539.5);
 axis([0 p.trial.display.pWidth 0 p.trial.display.pHeight]);
 grid on;
 axis equal;
