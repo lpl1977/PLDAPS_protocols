@@ -61,9 +61,9 @@ shapes = {'triangle','diamond','pentagon'};
 
 p.functionHandles.sequenceObj = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
 
-[selectedSequences.left,sequenceSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.sequenceObj.selector('140');
-[selectedSequences.right,sequenceSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.sequenceObj.selector('340');
-[selectedSequences.center,sequenceSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.sequenceObj.selector({'040','240','440'}); 
+[selectedSequences.left,sequenceSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.sequenceObj.selector(p.functionHandles.selectionCodes.left);
+[selectedSequences.right,sequenceSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.sequenceObj.selector(p.functionHandles.selectionCodes.right);
+[selectedSequences.center,sequenceSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.sequenceObj.selector(p.functionHandles.selectionCodes.center); 
 
 nSequencesPerResponse = lcm(lcm(size(selectedSequences.left,1),size(selectedSequences.right,1)),size(selectedSequences.center,1));
 selectedSequences.left = repmat(selectedSequences.left,nSequencesPerResponse/size(selectedSequences.left,1),1);
@@ -115,4 +115,5 @@ p.functionHandles.trialManagerObj.tokenize('selectionCode','matchedFeatures');
 %     uniqueSequenceCodes = [uniqueSequenceCodes; strcat('code',temp)];
 % end
 p.functionHandles.performanceTrackingObj = dmf.performanceTracking(...
-    'trackedOutcomes',{'140','340','040','240','440'});
+    'trackedOutcomes',[p.functionHandles.selectionCodes.left p.functionHandles.selectionCodes.center p.functionHandles.selectionCodes.right]);
+p.functionHandles.performanceTrackingObj.tallyTrials(c);

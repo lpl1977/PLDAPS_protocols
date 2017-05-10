@@ -8,6 +8,7 @@ classdef performanceTracking < handle
     properties
         numTrialsAttempted
         numTrialsCompleted
+        numTrialsAvailable
         numCorrect
         numCorrectionLoopTrials
         responseFrequency
@@ -40,6 +41,7 @@ classdef performanceTracking < handle
             for i=1:length(obj.possibleResponses)
                 obj.numTrialsAttempted.(obj.possibleResponses{i}) = 0;
                 obj.numTrialsCompleted.(obj.possibleResponses{i}) = 0;
+                obj.numTrialsAvailable.(obj.possibleResponses{i}) = 0;
                 obj.numCorrect.(obj.possibleResponses{i}) = 0;
                 obj.numCorrectionLoopTrials.(obj.possibleResponses{i}) = 0;
                 obj.responseFrequency.(obj.possibleResponses{i}) = struct('left',0,'center',0,'right',0);
@@ -47,9 +49,21 @@ classdef performanceTracking < handle
             for i=1:length(obj.trackedOutcomes)
                 obj.numTrialsAttempted.(obj.trackedOutcomes{i}) = 0;
                 obj.numTrialsCompleted.(obj.trackedOutcomes{i}) = 0;
+                obj.numTrialsAvailable.(obj.trackedOutcomes{i}) = 0;
                 obj.numCorrect.(obj.trackedOutcomes{i}) = 0;
                 obj.numCorrectionLoopTrials.(obj.trackedOutcomes{i}) = 0;
                 obj.responseFrequency.(obj.trackedOutcomes{i}) = struct('left',0,'center',0,'right',0);
+            end
+        end
+        
+        function obj = tallyTrials(obj,varargin)
+            c = varargin{1};
+            obj.numTrialsAvailable.total = length(c);
+            for i=1:length(c)
+                rewardedResponse = c{i}.rewardedResponse;
+                selectionCode = strcat('trackedOutcomes',c{i}.selectionCode);
+                obj.numTrialsAvailable.(rewardedResponse) = obj.numTrialsAvailable.(rewardedResponse)+1;
+                obj.numTrialsAvailable.(selectionCode) = obj.numTrialsAvailable.(selectionCode)+1;
             end
         end
         
@@ -103,7 +117,7 @@ classdef performanceTracking < handle
         function obj = output(obj)
             
             %  Field widths
-            numFieldWidth = floor(log10(obj.numTrialsAttempted.total))+1;
+            numFieldWidth = floor(log10(obj.numTrialsAvailable.total))+1;
             textFieldWidth = 0;
             
             for i=1:length(obj.possibleResponses)
@@ -125,21 +139,19 @@ classdef performanceTracking < handle
             end
             fprintf('\n');
             
-            %  Propertion correct
+            %  Proportion correct
             fprintf('Proportion Correct:\n');
-%            fprintf('%*s:\n',textFieldWidth,'Proportion Correct');
             for i=1:length(obj.possibleResponses)
-                fprintf('%*s:  (%*d/%*d) %0.2f, p = %0.3g\n',textFieldWidth,obj.possibleResponses{i},numFieldWidth,obj.numCorrect.(obj.possibleResponses{i}),numFieldWidth,obj.numTrialsCompleted.(obj.possibleResponses{i}),obj.numCorrect.(obj.possibleResponses{i})/max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),binocdf(obj.numCorrect.(obj.possibleResponses{i}),max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),1/3,'upper'));
+                fprintf('%*s:  (%*d/%*d/%*d) %0.2f, p = %0.3g\n',textFieldWidth,obj.possibleResponses{i},numFieldWidth,obj.numCorrect.(obj.possibleResponses{i}),numFieldWidth,obj.numTrialsCompleted.(obj.possibleResponses{i}),numFieldWidth,obj.numTrialsAvailable.(obj.possibleResponses{i}),obj.numCorrect.(obj.possibleResponses{i})/max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),binocdf(obj.numCorrect.(obj.possibleResponses{i}),max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),1/3,'upper'));
             end
             fprintf('\n');
             for i=1:length(obj.trackedOutcomes)
-                fprintf('%*s:  (%*d/%*d) %0.2f, p = %0.3g\n',textFieldWidth,strrep(obj.trackedOutcomes{i},'trackedOutcomes',''),numFieldWidth,obj.numCorrect.(obj.trackedOutcomes{i}),numFieldWidth,obj.numTrialsCompleted.(obj.trackedOutcomes{i}),obj.numCorrect.(obj.trackedOutcomes{i})/max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),binocdf(obj.numCorrect.(obj.trackedOutcomes{i}),max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),1/3,'upper'));
+                fprintf('%*s:  (%*d/%*d/%*d) %0.2f, p = %0.3g\n',textFieldWidth,strrep(obj.trackedOutcomes{i},'trackedOutcomes',''),numFieldWidth,obj.numCorrect.(obj.trackedOutcomes{i}),numFieldWidth,obj.numTrialsCompleted.(obj.trackedOutcomes{i}),numFieldWidth,obj.numTrialsAvailable.(obj.trackedOutcomes{i}),obj.numCorrect.(obj.trackedOutcomes{i})/max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),binocdf(obj.numCorrect.(obj.trackedOutcomes{i}),max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),1/3,'upper'));
             end
             fprintf('\n');
             
             %  Response frequencies
             fprintf('Response Frequencies:\n');
-            %            fprintf('%*s:  ',textFieldWidth,'Response Frequencies');
             fprintf('%*s',textFieldWidth+3,' ');
             for i=2:length(obj.possibleResponses)
                 fprintf('%-*s ',2*numFieldWidth+8,obj.possibleResponses{i});
@@ -153,19 +165,10 @@ classdef performanceTracking < handle
                 fprintf('\n');
             end
             fprintf('\n');
-%             for i=1:length(obj.trackedOutcomes)
-%                 fprintf('%*s:  ',textFieldWidth,strrep(obj.trackedOutcomes{i},'trackedOutcomes',''));
-%                 for j=2:length(obj.possibleResponses)
-%                     fprintf('(%*d/%*d) %0.2f ',numFieldWidth,obj.responseFrequency.(obj.trackedOutcomes{i}).(obj.possibleResponses{j}),numFieldWidth,obj.numTrialsCompleted.(obj.trackedOutcomes{i}),obj.responseFrequency.(obj.trackedOutcomes{i}).(obj.possibleResponses{j})/max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})));
-%                 end
-%                 fprintf('\n');
-%             end
-%             fprintf('\n');
             
             %  Trial aborts
             if(~isempty(obj.abortMessages))
                 fprintf('Trial Aborts:\n');
-%                fprintf('%*s:\n',textFieldWidth,'Trial Aborts');
                 for i=1:length(obj.abortMessages)
                     fprintf('%*s:  %d\n',obj.messageLength+2,obj.abortMessages{i},obj.numAborts(i));
                 end
@@ -175,7 +178,6 @@ classdef performanceTracking < handle
             %  Trial interrupts
             if(~isempty(obj.interruptMessages))
                 fprintf('Trial Interrupts:\n');
-%                fprintf('%*s:\n',textFieldWidth,'Trial Interrupts');
                 for i=1:length(obj.interruptMessages)
                     fprintf('%*s:  %d\n',obj.messageLength+2,obj.interruptMessages{i},obj.numInterrupts(i));
                 end
