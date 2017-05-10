@@ -43,11 +43,11 @@ switch state
         fprintf(1,'****************************************************************\n');
         
         %  If this is the mini-rig then prepare to use the rewardManager
-        if(isField(p.trial,'a2duino') && p.trial.a2duino.use)
+        if(isField(p.trial,'a2duino') && p.trial.a2duino.useForReward)
             fprintf(1,'****************************************************************\n');
-            fprintf(1,'Using the a2duino DAQ for reward.  Initialize rewardManager\n');
+            fprintf(1,'Using the a2duino DAQ for reward.\n');
+            fprintf(1,'Reward type: %s.\n',p.trial.a2duino.rewardType);
             fprintf(1,'****************************************************************\n');
-            p.functionHandles.rewardManagerObj = a2duino.rewardManager(p.functionHandles.a2duinoObj);
         end
         
     case p.trial.pldaps.trialStates.trialSetup
@@ -56,7 +56,6 @@ switch state
         %  stimuli parameters
         
         %  Condition from cell array
-        %p.trial.condition = p.conditions{p.functionHandles.trialManagerObj.trialIndex};
         p.trial.condition = p.functionHandles.trialManagerObj.nextTrial;
         
         %  Initialize trial state variables
@@ -171,11 +170,13 @@ switch state
         end
         
         %  Check if we have hit a termination condition
-        if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
-            p.functionHandles.rewardManagerObj.checkRewardStatus;
-            if(p.functionHandles.rewardManagerObj.releaseFailed)
-                fprintf('We are out of pellets.\n');
-                p.trial.pldaps.quit = 2;
+        if(isfield(p.trial,'a2duino') && p.trial.a2duino.useForReward)
+            switch p.trial.a2duino.rewardType
+                case 'pellet'
+                    if(~p.functionHandles.a2duinoObj.rewardInProgress && ~p.functionHandles.a2duinoObj.rewardCompleted)
+                        fprintf('We are out of pellets; terminating session.\n');
+                        p.trial.pldaps.quit = 2;
+                    end
             end
         end
         
@@ -442,22 +443,27 @@ switch state
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                     pds.audio.play(p,'reward',1);
                     
-                    %  This section for a2duino managed reward
-                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
-                        p.functionHandles.rewardManagerObj.giveReward('pellet');
+                    %  Provide reward
+                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.useForReward)
+                        switch p.trial.a2duino.rewardType
+                            case 'pellet'
+                                p.functionHandles.a2duinoObj.startPelletRelease;
+                            case 'fluid'
+                                p.functionHandles.a2duinoObj.startFluidReward(p.functionHandles.reward);
+                        end
                     else
                         pds.behavior.reward.give(p,p.functionHandles.reward);
                     end
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     pds.audio.stop(p,'reward');
                     
+                        p.trial.flagNextTrial = true;
                     %  Check to make sure the reward is not currently in
-                    %  progress (only relevant for pellets)
-                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.use)
-                        p.functionHandles.rewardManagerObj.checkRewardStatus;
-                        if(~p.functionHandles.rewardManagerObj.releaseInProgress)
+                    %  progress
+                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.useForReward)
+                        if(~p.functionHandles.a2duinoObj.rewardInProgress)
                             p.trial.flagNextTrial = true;
-                        end        
+                        end
                     else
                         p.trial.flagNextTrial = true;
                     end
