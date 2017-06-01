@@ -29,38 +29,58 @@ if(nargin==1)
     
     switch lower(p.trial.session.subject)
         case 'murray'
-            p.functionHandles.includedResponses = {'left','center','right'};
-            p.functionHandles.selectionCodes.left = {...
-                '041','241','441'};
-            p.functionHandles.selectionCodes.center = {...
-                '040','240','440',...
-                '042','242','442',...
-                '044','244','444',...
-                };
-            p.functionHandles.selectionCodes.right = {...
-                '043','243','443'};
+            p.functionHandles.includedResponses = {'left','center','right'};      
+
+            p.functionHandles.selectionCodes.left = {'441'};
+            p.functionHandles.selectionCodes.center = {'440','442','444'};
+            p.functionHandles.selectionCodes.right = {'443'};
+            
+%             p.functionHandles.selectionCodes.left = {...
+%                 '140','142','144'};
+%             p.functionHandles.selectionCodes.center = {...
+%                 '040','240','440',...
+%                 '042','242','442',...
+%                 '044','244','444'};
+%             p.functionHandles.selectionCodes.right = {...
+%                 '340','342','344'};
+            
+%             p.functionHandles.includedResponses = {'left','center','right'};
+%             p.functionHandles.selectionCodes.left = {...
+%                 '041','241','441'};
+%             p.functionHandles.selectionCodes.center = {...
+%                 '040','240','440',...
+%                 '042','242','442',...
+%                 '044','244','444'};
+%             p.functionHandles.selectionCodes.right = {...
+%                 '043','243','443'};
+
         case 'meatball'
-            p.functionHandles.includedResponses = {'left','center','right'};
-            p.functionHandles.selectionCodes.left = {...
-                '140','142','144'};
-            p.functionHandles.selectionCodes.center = {...
-                '040','240','440',...
-                '042','242','442',...
-                '044','244','444',...
-                };
-            p.functionHandles.selectionCodes.right = {...
-                '340','342','344'};
+            p.functionHandles.includedResponses = {'left','center','right'};   
+
+            p.functionHandles.selectionCodes.left = {'441'};
+            p.functionHandles.selectionCodes.center = {'440','442','444'};
+            p.functionHandles.selectionCodes.right = {'443'};
+            
+%             p.functionHandles.selectionCodes.left = {'144'};
+%             p.functionHandles.selectionCodes.center = {'044','244','444'};
+%             p.functionHandles.selectionCodes.right = {'344'};
+            
+%             p.functionHandles.selectionCodes.left = {...
+%                 '140','142','144'};
+%             p.functionHandles.selectionCodes.center = {...
+%                 '040','240','440',...
+%                 '042','242','442',...
+%                 '044','244','444'};
+%             p.functionHandles.selectionCodes.right = {...
+%                 '340','342','344'};
+        
         case 'splinter'
-            p.functionHandles.includedResponses = {'left','center','right'};
-            p.functionHandles.selectionCodes.left = {...
-                '041','241','441'};
-            p.functionHandles.selectionCodes.center = {...
-                '040','240','440',...
-                '042','242','442',...
-                '044','244','444',...
-                };
-            p.functionHandles.selectionCodes.right = {...
-                '043','243','443'};
+            p.functionHandles.includedResponses = {'left','center','right'};   
+
+            p.functionHandles.selectionCodes.left = {'441'};
+            p.functionHandles.selectionCodes.center = {'440','442','444'};
+            p.functionHandles.selectionCodes.right = {'443'};
+        
         case 'debug'
             p.functionHandles.includedResponses = {'left','center','right'};
             p.functionHandles.selectionCodes.left = {'140','142','144'};
@@ -92,7 +112,7 @@ else
                 case 'meatball'
                     symbolAlphas = 1;
                 case 'splinter'
-                    symbolAlphas = 0;
+                    symbolAlphas = 0.5;
                 case 'debug'
                     symbolAlphas = 1.0; %0.5 + 0.5*(p.functionHandles.trialManagerObj.repetitionNumber<1);
             end
@@ -115,13 +135,14 @@ else
                 case 'murray'
                     %  Careful!  Murray seems to boycott if the reward rate
                     %  is too low.
-                    p.functionHandles.reward = 0.6;
+                    p.functionHandles.reward = 0.5;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'meatball'
-                    p.functionHandles.reward = 0.45;
+                    p.functionHandles.reward = 0.5;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'splinter'
-                    p.functionHandles.timing.holdDelay = min(1,0 + exprnd(0.5));
+                    p.functionHandles.reward = 1.0;
+                    p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'debug'
                     p.functionHandles.timing.reward = 0;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));

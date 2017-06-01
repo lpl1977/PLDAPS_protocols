@@ -97,23 +97,17 @@ for i=1:length(p.functionHandles.includedResponses)
         c{(i-1)*nSequencesPerResponse+j}.matchedFeatures = matchedFeatures.(p.functionHandles.includedResponses{i}){j};
     end
 end
-p.conditions = cell(numel(c)*3,1);
+p.conditions = cell(numel(c)*10,1);
 
 %  Session termination criteria--set finish to Inf because we are using the
 %  trial manager
 p.trial.pldaps.finish = Inf;
 
 %  Initialize trial management
-p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'minSequentialCorrects',1);
+p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'numDecks',2);
 p.functionHandles.trialManagerObj.tokenize('selectionCode','matchedFeatures');
-%p.functionHandles.trialManagerObj.tokenize('rewardedResponse','selectionCode','matchedFeatures');
 
 %  Initialize performance tracking
-% uniqueSequenceCodes = [];
-% for i=1:length(p.functionHandles.possibleResponses)
-%     temp = unique(selectionCodes.(p.functionHandles.possibleResponses{i}));
-%     uniqueSequenceCodes = [uniqueSequenceCodes; strcat('code',temp)];
-% end
 p.functionHandles.performanceTrackingObj = dmf.performanceTracking(...
     'trackedOutcomes',[p.functionHandles.selectionCodes.left p.functionHandles.selectionCodes.center p.functionHandles.selectionCodes.right]);
-p.functionHandles.performanceTrackingObj.tallyTrials(c);
+p.functionHandles.performanceTrackingObj.tallyTrials(p.functionHandles.trialManagerObj.conditions);

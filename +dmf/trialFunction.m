@@ -148,10 +148,9 @@ switch state
                 %  Check correction loop exit
                 p.functionHandles.trialManagerObj.checkCorrectionLoopExit(p.functionHandles.trialOutcomeObj.correct);
                 if(p.functionHandles.trialManagerObj.inCorrectionLoop)
-                    fprintf('Continue correction loop with %d of %d sequential correct responses made.\n',...
-                        p.functionHandles.trialManagerObj.sequentialCorrects,p.functionHandles.trialManagerObj.minSequentialCorrects);
+                    fprintf('Continue correction loop.\n');                    
                 else
-                    fprintf('Monkey made %d sequential correct responses; exit correction loop.\n',p.functionHandles.trialManagerObj.minSequentialCorrects);
+                    fprintf('Monkey made a correct responses; exit correction loop.\n');                    
                 end
             end
         else

@@ -142,11 +142,11 @@ classdef performanceTracking < handle
             %  Proportion correct
             fprintf('Proportion Correct:\n');
             for i=1:length(obj.possibleResponses)
-                fprintf('%*s:  (%*d/%*d/%*d) %0.2f, p = %0.3g\n',textFieldWidth,obj.possibleResponses{i},numFieldWidth,obj.numCorrect.(obj.possibleResponses{i}),numFieldWidth,obj.numTrialsCompleted.(obj.possibleResponses{i}),numFieldWidth,obj.numTrialsAvailable.(obj.possibleResponses{i}),obj.numCorrect.(obj.possibleResponses{i})/max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),binocdf(obj.numCorrect.(obj.possibleResponses{i}),max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),1/3,'upper'));
+                fprintf('%*s:  (%*d/%*d of %*d) %0.2f, p = %0.3g\n',textFieldWidth,obj.possibleResponses{i},numFieldWidth,obj.numCorrect.(obj.possibleResponses{i}),numFieldWidth,obj.numTrialsCompleted.(obj.possibleResponses{i}),numFieldWidth,obj.numTrialsAvailable.(obj.possibleResponses{i}),obj.numCorrect.(obj.possibleResponses{i})/max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),binocdf(obj.numCorrect.(obj.possibleResponses{i}),max(1,obj.numTrialsCompleted.(obj.possibleResponses{i})),1/3,'upper'));
             end
             fprintf('\n');
             for i=1:length(obj.trackedOutcomes)
-                fprintf('%*s:  (%*d/%*d/%*d) %0.2f, p = %0.3g\n',textFieldWidth,strrep(obj.trackedOutcomes{i},'trackedOutcomes',''),numFieldWidth,obj.numCorrect.(obj.trackedOutcomes{i}),numFieldWidth,obj.numTrialsCompleted.(obj.trackedOutcomes{i}),numFieldWidth,obj.numTrialsAvailable.(obj.trackedOutcomes{i}),obj.numCorrect.(obj.trackedOutcomes{i})/max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),binocdf(obj.numCorrect.(obj.trackedOutcomes{i}),max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),1/3,'upper'));
+                fprintf('%*s:  (%*d/%*d of %*d) %0.2f, p = %0.3g\n',textFieldWidth,strrep(obj.trackedOutcomes{i},'trackedOutcomes',''),numFieldWidth,obj.numCorrect.(obj.trackedOutcomes{i}),numFieldWidth,obj.numTrialsCompleted.(obj.trackedOutcomes{i}),numFieldWidth,obj.numTrialsAvailable.(obj.trackedOutcomes{i}),obj.numCorrect.(obj.trackedOutcomes{i})/max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),binocdf(obj.numCorrect.(obj.trackedOutcomes{i}),max(1,obj.numTrialsCompleted.(obj.trackedOutcomes{i})),1/3,'upper'));
             end
             fprintf('\n');
             
