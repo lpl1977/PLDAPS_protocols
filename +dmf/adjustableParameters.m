@@ -135,10 +135,10 @@ else
                 case 'murray'
                     %  Careful!  Murray seems to boycott if the reward rate
                     %  is too low.
-                    p.functionHandles.reward = 0.5;
+                    p.functionHandles.reward = 0.475;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'meatball'
-                    p.functionHandles.reward = 0.5;
+                    p.functionHandles.reward = 0.45;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'splinter'
                     p.functionHandles.reward = 1.0;
