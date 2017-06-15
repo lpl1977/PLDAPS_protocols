@@ -130,6 +130,9 @@ else
             p.functionHandles.timing.errorPenaltyDuration = 2;
             p.functionHandles.timing.penaltyDuration = 10;
             p.functionHandles.timing.holdDelay = 0;
+            p.functionHandles.timing.presentationDuration = 0.5;
+            p.functionHandles.timing.delayDuration = 0.5;
+            p.functionHandles.timing.probeDuration = 0.25;
             
             switch lower(p.trial.session.subject)
                 case 'murray'

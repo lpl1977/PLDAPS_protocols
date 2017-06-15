@@ -4,6 +4,10 @@ function p = trialFunction(p,state)
 
 %  **  ISSUES TO CONSIDER / THOUGHTS FOR REVISIONS
 
+%  Why does it sometimes go over 540?
+%  How do I do blocks?
+%  How can I more flexibly set the number of trials?
+
 switch state
     
     case p.trial.pldaps.trialStates.experimentPostOpenScreen
@@ -29,12 +33,14 @@ switch state
         %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
         
-        %  Generate symbol textures at beginning of experiment (we can only
+        %  Generate textures at beginning of experiment (we can only
         %  do this once we have the display pointer, and we only need do it
         %  this one time)
-        p.functionHandles.symbolTextures = dmf.generateSymbolTextures(p);
         fprintf(1,'****************************************************************\n');
-        fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.symbolTextures));
+        p.functionHandles.textures.symbols = dmf.generateSymbolTextures(p);
+        fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.textures.symbols));
+        p.functionHandles.textures.pedestals = dmf.generatePedestalsTexture(p);
+        fprintf(1,'Generated pedestals texture.\n');
         fprintf(1,'****************************************************************\n');
         
         fprintf(1,'****************************************************************\n');
@@ -83,7 +89,8 @@ switch state
         %  before trial start!
         
         %  Create textures for display
-        p.functionHandles.sequenceTextures = dmf.generateSequenceTextures(p);
+        p.functionHandles.textures.trialTextures = dmf.generateTrialTextures(p);
+        %        p.functionHandles.sequenceTextures = dmf.generateSequenceTextures(p);
         
         %  Echo trial specs to screen
         fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
@@ -95,9 +102,9 @@ switch state
         fprintf('%25s:\n','Symbols');
         for i=1:3
             fprintf('%25s:  ',p.functionHandles.possibleResponses{i});
-            fprintf('%s ',p.functionHandles.sequenceObj.features.colors{p.trial.condition.sequenceSymbolCode(i,1)});
-            fprintf('%s ',p.functionHandles.sequenceObj.features.patterns{p.trial.condition.sequenceSymbolCode(i,2)});
-            fprintf('%s',p.functionHandles.sequenceObj.features.shapes{p.trial.condition.sequenceSymbolCode(i,3)});
+            fprintf('%s ',p.functionHandles.setObj.features.colors{p.trial.condition.setSymbolCode(i,1)});
+            fprintf('%s ',p.functionHandles.setObj.features.patterns{p.trial.condition.setSymbolCode(i,2)});
+            fprintf('%s',p.functionHandles.setObj.features.shapes{p.trial.condition.setSymbolCode(i,3)});
             fprintf('\n');
         end
         fprintf('%25s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
@@ -109,9 +116,14 @@ switch state
         %  should happen upon completion of a trial such as performance
         %  tracking and trial index updating.
         
-        %  Clean up sequence textures
-        Screen('Close',p.functionHandles.sequenceTextures);
-        
+        %  Clean up trial textures
+        fields = fieldnames(p.functionHandles.textures.trialTextures);
+        for i=1:length(fields)
+            if(~isempty(p.functionHandles.textures.trialTextures.(fields{i})))
+                Screen('Close',p.functionHandles.textures.trialTextures.(fields{i}));
+            end
+        end
+            
         %  Capture data for this trial
         p.trial.trialRecord.stateTransitionLog = p.functionHandles.stateVariables.transitionLog;
         if(p.trial.pldaps.quit~=0)
@@ -148,9 +160,9 @@ switch state
                 %  Check correction loop exit
                 p.functionHandles.trialManagerObj.checkCorrectionLoopExit(p.functionHandles.trialOutcomeObj.correct);
                 if(p.functionHandles.trialManagerObj.inCorrectionLoop)
-                    fprintf('Continue correction loop.\n');                    
+                    fprintf('Continue correction loop.\n');
                 else
-                    fprintf('Monkey made a correct responses; exit correction loop.\n');                    
+                    fprintf('Monkey made a correct responses; exit correction loop.\n');
                 end
             end
         else
@@ -188,25 +200,24 @@ switch state
         %  drawn. This is where all calls to Screen should be done.  Also,
         %  if there is a call to a function calling Screen, put it here!
         
-        %  For now we aren't cycling through the symbol phases
-        if(p.functionHandles.showSymbols)
-            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.sequenceTextures(p.functionHandles.symbolPhase));
+        %         %  For now we aren't cycling through the symbol phases
+        %         if(p.functionHandles.showSymbols)
+        %             Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.sequenceTextures(p.functionHandles.symbolPhase));
+        %         end
+        
+        %  If there is a trial texture, write it into the display pointer
+        if(~isempty(p.functionHandles.textures.trialTextures.(p.functionHandles.stateVariables.nextState)))
+            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.textures.trialTextures(p.functionHandles.stateVariables.nextState));
         end
         
         %  Draw the cursor (there is an internal check for cursor
         %  visibility).
-        if(p.functionHandles.showWarning)
-            fillColor = [0.8 0 0];
-        elseif(p.functionHandles.showEngage)
-            fillColor = [0 0.8 0];
-        elseif(p.functionHandles.showHold)
-            fillColor = [0.8 0.8 0.8];
-        else
-            fillColor = [0 0 0];
-        end
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
         screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);
-        p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,'fillColor',fillColor);
+        if(p.functionHandles.analogStickCursorObj.visible)
+            p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,...
+                'fillColor',p.functionHandles.cursorColors.(p.functionHandles.stateVariables.nextState));
+        end
         
         %  *******
         %  once you start putting a fixation spot in, you'll want to draw
@@ -311,34 +322,120 @@ switch state
                 %
                 %  We enter this state once the analog stick is engaged and
                 %  before we are ready to show the symbols.  He will wait
-                %  the hold duration before the symbol appears.
+                %  the hold duration before the symbol presentation begins.
+                %  He can move his eyes as much as he likes in this state.
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.holdDelay))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     fprintf('\tMonkey will be required to hold the analog stick for %5.3f sec.\n',p.functionHandles.stateVariables.timeRemainingInState);
-                elseif(p.functionHandles.analogStickWindowManager.inWindow('engaged') && p.functionHandles.stateVariables.timeInStateElapsed)
+                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     fprintf('\tMonkey kept analog stick engaged for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                    p.functionHandles.stateVariables.nextState = 'symbols';
+                    p.functionHandles.stateVariables.nextState = 'presentation';
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'warning';
                 end
                 
+            case 'presentation'
                 
-            case 'symbols'
-                
-                %  STATE:  symbols
+                %  STATE:  presentation
                 %
-                %  Show the symbols until delay elapsed and as long as he
-                %  has joystick at center position.  If he moves the
-                %  joystick too early, go to abort penalty.
-                
-                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                %  Show the symbols for presentation duration.  Advance to
+                %  delay once he fixates the center symbol.  He must keep
+                %  joystick engaged the entire time.  He may move his eyes
+                %  as much as he likes.
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.presentationDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                     p.functionHandles.showSymbols = true;
                     p.functionHandles.symbolPhase = 1;
-                else
+                elseif(p.functionHandles.stateVariables.timeInStateElapsed && p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     p.functionHandles.showHold = false;
+                    p.functionHandles.stateVariables.nextState = 'delay';
+                elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
+                    fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                    p.functionHandles.stateVariables.nextState = 'warning';
+                end
+                
+            case 'delay'
+                
+                %  STATE:  delay
+                %
+                %  This is a delay between the first presentation of
+                %  symbols and the probe symbol.  He must maintain fixation
+                %  and hold the joystick in window for duration of delay
+                %  period.
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.delayDuration))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
+                    p.functionHandles.showHold = false;
+                    p.functionHandles.stateVariables.nextState = 'probe';
+                elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
+                    
+                    %  Monkey has moved the analog stick prematurely.
+                    %  Since he has seen the symbols presented, this is a
+                    %  trial abort.
+                    fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                    p.functionHandles.trialOutcomeObj.recordAbort(...
+                        'abortState',p.functionHandles.stateVariables.currentState,...
+                        'abortMessage','prematureAnalogStickMovement',...
+                        'abortTime',GetSecs);
+                    p.functionHandles.analogStickCursorObj.visible = false;
+                    p.functionHandles.showSymbols = false;
+                    p.functionHandles.stateVariables.nextState = 'penalty';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
+%                 elseif(false)
+%                     
+%                     %  Monkey broke fixation prematurely. Since he has seen
+%                     %  the symbols presented, this is a trial abort.
+%                     fprintf('\tMonkey broke fixation prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+%                     p.functionHandles.trialOutcomeObj.recordAbort(...
+%                         'abortState',p.functionHandles.stateVariables.currentState,...
+%                         'abortMessage','prematureFixationBreak',...
+%                         'abortTime',GetSecs);
+%                     p.functionHandles.analogStickCursorObj.visible = false;
+%                     p.functionHandles.showSymbols = false;
+%                     p.functionHandles.stateVariables.nextState = 'penalty';
+%                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
+                end
+                
+            case 'probe'
+                
+                %  STATE:  probe
+                %
+                %  Presentation of the probe symbol.  He must maintain
+                %  fixation and hold the joystick in window for a brief
+                %  delay.  Afterwards he can move the joystick and gaze to
+                %  his little heart's content.
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.probeDuration))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     p.functionHandles.stateVariables.nextState = 'response';
+                elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
+                    
+                    %  Monkey has moved the analog stick prematurely.
+                    %  Since he has seen the symbols presented, this is a
+                    %  trial abort.
+                    fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                    p.functionHandles.trialOutcomeObj.recordAbort(...
+                        'abortState',p.functionHandles.stateVariables.currentState,...
+                        'abortMessage','PrematureAnalogStickMovement',...
+                        'abortTime',GetSecs);
+                    p.functionHandles.analogStickCursorObj.visible = false;
+                    p.functionHandles.showSymbols = false;
+                    p.functionHandles.stateVariables.nextState = 'penalty';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
+%                 elseif(false)
+%                     
+%                     %  Monkey broke fixation prematurely. Since he has seen
+%                     %  the symbols presented, this is a trial abort.
+%                     fprintf('\tMonkey broke fixation prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+%                     p.functionHandles.trialOutcomeObj.recordAbort(...
+%                         'abortState',p.functionHandles.stateVariables.currentState,...
+%                         'abortMessage','prematureFixationBreak',...
+%                         'abortTime',GetSecs);
+%                     p.functionHandles.analogStickCursorObj.visible = false;
+%                     p.functionHandles.showSymbols = false;
+%                     p.functionHandles.stateVariables.nextState = 'penalty';
+%                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
                 
             case 'response'
@@ -456,7 +553,7 @@ switch state
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     pds.audio.stop(p,'reward');
                     
-                        p.trial.flagNextTrial = true;
+                    p.trial.flagNextTrial = true;
                     %  Check to make sure the reward is not currently in
                     %  progress
                     if(isfield(p.trial,'a2duino') && p.trial.a2duino.useForReward)
