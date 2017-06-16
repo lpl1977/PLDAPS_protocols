@@ -33,20 +33,30 @@ p.functionHandles.geometry.symbolCenters = [...
     p.functionHandles.geometry.center(1) p.functionHandles.geometry.center(2); ...
     p.functionHandles.geometry.center(1)+p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
 
-%  Features
+%  Symbol features
 p.functionHandles.features.symbolRadius = p.functionHandles.geometry.symbolRadius;
 p.functionHandles.features.nSpatialCycles = 16;
 p.functionHandles.features.nThetaCycles = 8;
-p.functionHandles.features.bgColor = p.trial.display.bgColor;
+
+%  Background color
+p.functionHandles.colors.background = p.trial.display.bgColor;
 
 %  Cursor colors
-p.functionHandles.cursorColors.engage = [0 0.8 0];
-p.functionHandles.cursorColors.hold = [0.8 0.8 0.8];
-p.functionHandles.cursorColors.presentation = p.functionHandles.cursorColors.hold;
-p.functionHandles.cursorColors.delay = p.functionHandles.cursorColors.hold;
-p.functionHandles.cursorColors.probe = p.functionHandles.cursorColors.hold;
-p.functionHandles.cursorColors.response = [0 0 0];
-p.functionHandles.cursorColors.warning = [0.8 0 0];
+p.functionHandles.colors.cursor.start = [0 0 0];
+p.functionHandles.colors.cursor.engage = [0 0.8 0];
+p.functionHandles.colors.cursor.hold = [0.8 0.8 0.8];
+p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.delay = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.probe = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.response = [0 0 0];
+p.functionHandles.colors.cursor.warning = [0.8 0 0];
+p.functionHandles.colors.cursor.return = [0 0 0];
+p.functionHandles.colors.cursor.penalty = [0 0 0];
+p.functionHandles.colors.cursor.reward = [0 0 0];
+p.functionHandles.colors.cursor.error = [0 0 0];
+
+%  Pedestal color
+p.functionHandles.colors.pedestal = [0.45 0.45 0.45];
 
 %  symbolAlphas
 p.functionHandles.symbolAlphas = struct('left',[],'center',[],'right',[]);

@@ -7,9 +7,9 @@ function pedestalsTexture = generatePedestalsTexture(p)
 
 %  Extract components of input structure
 symbolCenters = p.functionHandles.geometry.symbolCenters;
-baseRect = [0 0 2*p.functionHandles.geometry.symbolRadius 2*p.functionHandles.geometry.symbolRadius];
-bgColor = p.functionHandles.features.bgColor;
-pedestalColor = p.functionHandles.features.pedestalColor;
+baseRect = [0 0 p.functionHandles.geometry.symbolRadius p.functionHandles.geometry.symbolRadius];
+bgColor = p.functionHandles.colors.background;
+pedestalColor = p.functionHandles.colors.pedestal;
 
 %  Write pedestals
 pedestalsTexture = Screen('OpenOffScreenWindow',p.trial.display.ptr,[bgColor 1]);

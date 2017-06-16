@@ -9,10 +9,10 @@ function symbolTextures = generateSymbolTextures(p)
 R = p.functionHandles.features.symbolRadius;
 nSpatialCycles = p.functionHandles.features.nSpatialCycles;
 nThetaCycles = p.functionHandles.features.nThetaCycles;
-bgColor = p.functionHandles.features.bgColor;
+bgColor = p.functionHandles.colors.background;
 
-symbolFeatures = p.functionHandles.sequenceObj.features;
-symbolCodes = p.functionHandles.sequenceObj.symbolCodes;
+symbolFeatures = p.functionHandles.setObj.features;
+symbolCodes = p.functionHandles.setObj.symbolCodes;
 
 %  insertShape
 %

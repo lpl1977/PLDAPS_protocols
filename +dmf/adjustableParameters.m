@@ -82,10 +82,11 @@ if(nargin==1)
             p.functionHandles.selectionCodes.right = {'443'};
         
         case 'debug'
-            p.functionHandles.includedResponses = {'left','center','right'};
-            p.functionHandles.selectionCodes.left = {'140','142','144'};
-            p.functionHandles.selectionCodes.center = {'040','240','440','042','242','442','044','244','444'};
-            p.functionHandles.selectionCodes.right = {'340','342','344'};
+            p.functionHandles.includedResponses = {'left','center','right'}; 
+
+            p.functionHandles.selectionCodes.left = {'441'};
+            p.functionHandles.selectionCodes.center = {'440','442','444'};
+            p.functionHandles.selectionCodes.right = {'443'};
     end
 else
     
@@ -130,8 +131,8 @@ else
             p.functionHandles.timing.errorPenaltyDuration = 2;
             p.functionHandles.timing.penaltyDuration = 10;
             p.functionHandles.timing.holdDelay = 0;
-            p.functionHandles.timing.presentationDuration = 0.5;
-            p.functionHandles.timing.delayDuration = 0.5;
+            p.functionHandles.timing.presentationDuration = 2;
+            p.functionHandles.timing.delayDuration = 1;
             p.functionHandles.timing.probeDuration = 0.25;
             
             switch lower(p.trial.session.subject)

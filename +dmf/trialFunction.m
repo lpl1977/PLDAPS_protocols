@@ -54,7 +54,7 @@ switch state
             fprintf(1,'Using the a2duino DAQ for reward.\n');
             fprintf(1,'Reward type: %s.\n',p.trial.a2duino.rewardType);
             fprintf(1,'****************************************************************\n');
-        end
+        end        
         
     case p.trial.pldaps.trialStates.trialSetup
         %  trialSetup--this is where we would perform any steps that needed
@@ -90,7 +90,6 @@ switch state
         
         %  Create textures for display
         p.functionHandles.textures.trialTextures = dmf.generateTrialTextures(p);
-        %        p.functionHandles.sequenceTextures = dmf.generateSequenceTextures(p);
         
         %  Echo trial specs to screen
         fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
@@ -200,24 +199,14 @@ switch state
         %  drawn. This is where all calls to Screen should be done.  Also,
         %  if there is a call to a function calling Screen, put it here!
         
-        %         %  For now we aren't cycling through the symbol phases
-        %         if(p.functionHandles.showSymbols)
-        %             Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.sequenceTextures(p.functionHandles.symbolPhase));
-        %         end
+        %  Write appropriate texture into the display pointer
+        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.textures.trialTextures.(p.functionHandles.stateVariables.nextState));
         
-        %  If there is a trial texture, write it into the display pointer
-        if(~isempty(p.functionHandles.textures.trialTextures.(p.functionHandles.stateVariables.nextState)))
-            Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.textures.trialTextures(p.functionHandles.stateVariables.nextState));
-        end
-        
-        %  Draw the cursor (there is an internal check for cursor
-        %  visibility).
+        %  Draw the cursor
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
-        screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);
-        if(p.functionHandles.analogStickCursorObj.visible)
-            p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,...
-                'fillColor',p.functionHandles.cursorColors.(p.functionHandles.stateVariables.nextState));
-        end
+        screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);        
+        p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,...
+            'fillColor',p.functionHandles.colors.cursor.(p.functionHandles.stateVariables.nextState));
         
         %  *******
         %  once you start putting a fixation spot in, you'll want to draw
@@ -304,7 +293,8 @@ switch state
                 %  STATE:  engage
                 %
                 %  We enter this state once the analog stick is in the
-                %  neutral position during the start state.
+                %  neutral position during the start state.  Go to hold
+                %  once he engages the joystick.
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     p.functionHandles.analogStickCursorObj.visible = true;
@@ -327,7 +317,8 @@ switch state
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.holdDelay))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     fprintf('\tMonkey will be required to hold the analog stick for %5.3f sec.\n',p.functionHandles.stateVariables.timeRemainingInState);
-                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
+                end
+                if(p.functionHandles.stateVariables.timeInStateElapsed)
                     fprintf('\tMonkey kept analog stick engaged for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'presentation';
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
@@ -341,18 +332,30 @@ switch state
                 %
                 %  Show the symbols for presentation duration.  Advance to
                 %  delay once he fixates the center symbol.  He must keep
-                %  joystick engaged the entire time.  He may move his eyes
-                %  as much as he likes.
+                %  joystick engaged the entire time.  During this state he
+                %  may move his eyes as much as he likes to examine the
+                %  symbols, but he may not move the joystick out of
+                %  position.
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.presentationDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                     p.functionHandles.showSymbols = true;
                     p.functionHandles.symbolPhase = 1;
-                elseif(p.functionHandles.stateVariables.timeInStateElapsed && p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                    p.functionHandles.showHold = false;
-                    p.functionHandles.stateVariables.nextState = 'delay';
-                elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
+                end
+                if(p.functionHandles.analogStickWindowManager.inWindow('engaged'))
+                    if(p.functionHandles.stateVariables.timeInStateElapsed)
+                        p.functionHandles.showHold = false;
+                        p.functionHandles.stateVariables.nextState = 'delay';
+                    end
+                else
                     fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                    p.functionHandles.stateVariables.nextState = 'warning';
+                    p.functionHandles.trialOutcomeObj.recordAbort(...
+                        'abortState',p.functionHandles.stateVariables.currentState,...
+                        'abortMessage','prematureAnalogStickMovement',...
+                        'abortTime',GetSecs);
+                    p.functionHandles.analogStickCursorObj.visible = false;
+                    p.functionHandles.showSymbols = false;
+                    p.functionHandles.stateVariables.nextState = 'penalty';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
                 
             case 'delay'
@@ -365,7 +368,8 @@ switch state
                 %  period.
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.delayDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
-                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
+                end
+                if(p.functionHandles.stateVariables.timeInStateElapsed)
                     p.functionHandles.showHold = false;
                     p.functionHandles.stateVariables.nextState = 'probe';
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
@@ -407,7 +411,8 @@ switch state
                 %  his little heart's content.
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.probeDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
-                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
+                end
+                if(p.functionHandles.stateVariables.timeInStateElapsed)
                     p.functionHandles.stateVariables.nextState = 'response';
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     
