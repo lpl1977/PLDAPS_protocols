@@ -19,9 +19,8 @@ switch state
         p.functionHandles.analogStickObj.pWidth = p.trial.display.pWidth;
         p.functionHandles.analogStickObj.pHeight = 0;
         
-        %  Now put some windows in; these are the defaults and can be
-        %  modified later.  Width of the center window is the symbol
-        %  diameter.
+        %  Put some windows in--these are the defaults and can be modified
+        %  later.  Width of the center window is the symbol diameter.
         horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
         centerWindow = 2*p.functionHandles.geometry.symbolRadius / horizontalSpan; %analogStickObj.pWidth;
         p.functionHandles.analogStickWindowManager.addWindow('neutral',[-0.5*centerWindow -0.5 0.5*centerWindow 0.5]);
@@ -33,13 +32,7 @@ switch state
         %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
         
-        %  Generate textures at beginning of experiment (we can only
-        %  do this once we have the display pointer, and we only need do it
-        %  this one time)
-        fprintf(1,'****************************************************************\n');
-        %p.functionHandles.symbolTextures = dmf.generateSymbolTextures(p);
-        %fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.symbolTextures));
-        fprintf(1,'****************************************************************\n');
+        %  Display messages        
         
         fprintf(1,'****************************************************************\n');
         fprintf('Windows for analog stick:\n');
@@ -82,8 +75,7 @@ switch state
         %  before trial start!
         
         %  Create textures for display
-%        p.functionHandles.trialTextures = dmf.generateTrialTextures(p);
-        dmf.generateTrialTextures(p);
+        p.functionHandles.graphicsManagerObj.prepareFrameTextures(p.trial.condition.selectedSet);
         
         %  Echo trial specs to screen
         fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
@@ -123,14 +115,10 @@ switch state
         p.trial.trialRecord.outcome = p.functionHandles.trialOutcomeObj.commit;
         fprintf('\n');
         
-        %  Close textures
-        fields = fieldnames(p.functionHandles.trialTextures);
-        for i=1:length(fields)
-            Screen('Close',p.functionHandles.trialTextures.(fields{i}));
-        end
+        %  Cleanup textures
+        p.functionHandles.graphicsManagerObj.trialCleanUp;        
         if(p.trial.pldaps.quit==2)
             p.functionHandles.graphicsManagerObj.cleanUp;
-%            Screen('Close',p.functionHandles.symbolTextures);
         end
         
         %  Track performance
@@ -196,7 +184,7 @@ switch state
         %  if there is a call to a function calling Screen, put it here!
         
         %  Write appropriate texture into the display pointer
-        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.trialTextures.(p.functionHandles.stateVariables.nextState));
+        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.graphicsManagerObj.getFrameTexture(p.functionHandles.stateVariables.nextState));
         
         %  Draw the cursor
         horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
@@ -406,7 +394,7 @@ switch state
                     fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.trialOutcomeObj.recordAbort(...
                         'abortState',p.functionHandles.stateVariables.currentState,...
-                        'abortMessage','PrematureAnalogStickMovement',...
+                        'abortMessage','prematureAnalogStickMovement',...
                         'abortTime',GetSecs);
                     p.functionHandles.analogStickCursorObj.visible = false;
                     p.functionHandles.stateVariables.nextState = 'penalty';
