@@ -11,7 +11,7 @@ nSpatialCycles = p.functionHandles.features.nSpatialCycles;
 nThetaCycles = p.functionHandles.features.nThetaCycles;
 bgColor = p.functionHandles.colors.background;
 
-symbolFeatures = p.functionHandles.setObj.features;
+symbolFeatures = p.functionHandles.setObj.symbolFeatures;
 symbolCodes = p.functionHandles.setObj.symbolCodes;
 
 %  insertShape

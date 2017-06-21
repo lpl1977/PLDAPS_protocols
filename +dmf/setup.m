@@ -56,8 +56,8 @@ p.functionHandles.colors.cursor.reward = [0 0 0];
 p.functionHandles.colors.cursor.error = [0 0 0];
 
 %  Pedestal color
-p.functionHandles.colors.pedestal = [0.45 0.45 0.45];
-
+p.functionHandles.colors.pedestal = [0.4 0.4 0.4];
+p.functionHandles.features.pedestalRadius = p.functionHandles.features.symbolRadius + 20;
 %  symbolAlphas
 p.functionHandles.symbolAlphas = struct('left',[],'center',[],'right',[]);
 
@@ -75,7 +75,7 @@ dmf.adjustableParameters(p);
 %  shapes:  {'circle','square','diamond','triangle','pentagon','hexagon'}
 
 colors = {'blue','scarlet','yellow'};
-patterns = {'solid'};
+patterns = {'horizontalLines'};
 shapes = {'triangle','diamond','pentagon'};
 
 p.functionHandles.setObj = dmf.set('colors',colors,'patterns',patterns,'shapes',shapes);
@@ -121,6 +121,16 @@ p.conditions = cell(numel(c)*10,1);
 %  Session termination criteria--set finish to Inf because we are using the
 %  trial manager
 p.trial.pldaps.finish = Inf;
+
+%  Generate symbol textures
+p.functionHandles.graphicsManagerObj = dmf.graphicsManager(...
+    'symbolFeatures',p.functionHandles.setObj.symbolFeatures,...
+    'symbolCodes',p.functionHandles.setObj.symbolCodes,...
+    'symbolRadius',p.functionHandles.features.symbolRadius,...
+    'colorLibrary',p.trial.display.colors,...
+    'windowPtr',p.trial.display.ptr,...
+    'pedestalRadius',p.functionHandles.features.pedestalRadius,...
+    'nSpatialCycles',p.functionHandles.features.nSpatialCycles);
 
 %  Initialize trial management
 p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'numDecks',2);

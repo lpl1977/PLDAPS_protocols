@@ -22,13 +22,13 @@ switch state
         %  Now put some windows in; these are the defaults and can be
         %  modified later.  Width of the center window is the symbol
         %  diameter.
-        p.functionHandles.geometry.horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
-        p.functionHandles.geometry.centerWindow = 2*p.functionHandles.geometry.symbolRadius / p.functionHandles.geometry.horizontalSpan; %analogStickObj.pWidth;
-        p.functionHandles.analogStickWindowManager.addWindow('neutral',[-0.5*p.functionHandles.geometry.centerWindow -0.5 0.5*p.functionHandles.geometry.centerWindow 0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-0.5*p.functionHandles.geometry.centerWindow -1 0.5*p.functionHandles.geometry.centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('center',[-0.5*p.functionHandles.geometry.centerWindow -1 0.5*p.functionHandles.geometry.centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -0.5*p.functionHandles.geometry.centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('right',[0.5*p.functionHandles.geometry.centerWindow -1 1 -0.5]);
+        horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
+        centerWindow = 2*p.functionHandles.geometry.symbolRadius / horizontalSpan; %analogStickObj.pWidth;
+        p.functionHandles.analogStickWindowManager.addWindow('neutral',[-0.5*centerWindow -0.5 0.5*centerWindow 0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-0.5*centerWindow -1 0.5*centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('center',[-0.5*centerWindow -1 0.5*centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -0.5*centerWindow -0.5]);
+        p.functionHandles.analogStickWindowManager.addWindow('right',[0.5*centerWindow -1 1 -0.5]);
         
         %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
@@ -37,10 +37,8 @@ switch state
         %  do this once we have the display pointer, and we only need do it
         %  this one time)
         fprintf(1,'****************************************************************\n');
-        p.functionHandles.textures.symbols = dmf.generateSymbolTextures(p);
-        fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.textures.symbols));
-        p.functionHandles.textures.pedestals = dmf.generatePedestalsTexture(p);
-        fprintf(1,'Generated pedestals texture.\n');
+        %p.functionHandles.symbolTextures = dmf.generateSymbolTextures(p);
+        %fprintf(1,'Generated %d symbol textures.\n',length(p.functionHandles.symbolTextures));
         fprintf(1,'****************************************************************\n');
         
         fprintf(1,'****************************************************************\n');
@@ -76,11 +74,6 @@ switch state
         
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
-        p.functionHandles.showSymbols = false;
-        p.functionHandles.showWarning = false;
-        p.functionHandles.showEngage = false;
-        p.functionHandles.showHold = false;
-        p.functionHandles.symbolPhase = 1;
         
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);
@@ -89,7 +82,8 @@ switch state
         %  before trial start!
         
         %  Create textures for display
-        p.functionHandles.textures.trialTextures = dmf.generateTrialTextures(p);
+%        p.functionHandles.trialTextures = dmf.generateTrialTextures(p);
+        dmf.generateTrialTextures(p);
         
         %  Echo trial specs to screen
         fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
@@ -101,9 +95,9 @@ switch state
         fprintf('%25s:\n','Symbols');
         for i=1:3
             fprintf('%25s:  ',p.functionHandles.possibleResponses{i});
-            fprintf('%s ',p.functionHandles.setObj.features.colors{p.trial.condition.setSymbolCode(i,1)});
-            fprintf('%s ',p.functionHandles.setObj.features.patterns{p.trial.condition.setSymbolCode(i,2)});
-            fprintf('%s',p.functionHandles.setObj.features.shapes{p.trial.condition.setSymbolCode(i,3)});
+            fprintf('%s ',p.functionHandles.setObj.symbolFeatures.colors{p.trial.condition.setSymbolCode(i,1)});
+            fprintf('%s ',p.functionHandles.setObj.symbolFeatures.patterns{p.trial.condition.setSymbolCode(i,2)});
+            fprintf('%s',p.functionHandles.setObj.symbolFeatures.shapes{p.trial.condition.setSymbolCode(i,3)});
             fprintf('\n');
         end
         fprintf('%25s:  %s\n','Rewarded response',p.trial.condition.rewardedResponse);
@@ -113,16 +107,8 @@ switch state
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  cleanUpandSave--post trial management; perform any steps that
         %  should happen upon completion of a trial such as performance
-        %  tracking and trial index updating.
+        %  tracking and trial index updating.        
         
-        %  Clean up trial textures
-        fields = fieldnames(p.functionHandles.textures.trialTextures);
-        for i=1:length(fields)
-            if(~isempty(p.functionHandles.textures.trialTextures.(fields{i})))
-                Screen('Close',p.functionHandles.textures.trialTextures.(fields{i}));
-            end
-        end
-            
         %  Capture data for this trial
         p.trial.trialRecord.stateTransitionLog = p.functionHandles.stateVariables.transitionLog;
         if(p.trial.pldaps.quit~=0)
@@ -136,6 +122,16 @@ switch state
         end
         p.trial.trialRecord.outcome = p.functionHandles.trialOutcomeObj.commit;
         fprintf('\n');
+        
+        %  Close textures
+        fields = fieldnames(p.functionHandles.trialTextures);
+        for i=1:length(fields)
+            Screen('Close',p.functionHandles.trialTextures.(fields{i}));
+        end
+        if(p.trial.pldaps.quit==2)
+            p.functionHandles.graphicsManagerObj.cleanUp;
+%            Screen('Close',p.functionHandles.symbolTextures);
+        end
         
         %  Track performance
         p.functionHandles.performanceTrackingObj.update(p.functionHandles.trialOutcomeObj);
@@ -200,11 +196,12 @@ switch state
         %  if there is a call to a function calling Screen, put it here!
         
         %  Write appropriate texture into the display pointer
-        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.textures.trialTextures.(p.functionHandles.stateVariables.nextState));
+        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.trialTextures.(p.functionHandles.stateVariables.nextState));
         
         %  Draw the cursor
+        horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
-        screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*p.functionHandles.geometry.horizontalSpan),p.functionHandles.geometry.center(1)-0.5*p.functionHandles.geometry.horizontalSpan);        
+        screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*horizontalSpan),p.functionHandles.geometry.center(1)-0.5*horizontalSpan);        
         p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,...
             'fillColor',p.functionHandles.colors.cursor.(p.functionHandles.stateVariables.nextState));
         
@@ -236,7 +233,6 @@ switch state
             pds.audio.stop(p,'warning');
             pds.audio.stop(p,'incorrect');
             pds.audio.stop(p,'reward');
-            p.functionHandles.showWarning = false;
             p.functionHandles.trialOutcomeObj.recordAbort(...
                 'abortState',p.functionHandles.stateVariables.currentState,...
                 'abortMessage','trialDurationElapsed',...
@@ -279,12 +275,10 @@ switch state
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     pds.audio.play(p,'warning',Inf);
                     p.functionHandles.analogStickCursorObj.visible = true;
-                    p.functionHandles.showWarning = true;
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
                     fprintf('\tAnalog stick returned to neutral position.\n');
                     pds.audio.stop(p,'warning');
                     p.functionHandles.analogStickCursorObj.visible = false;
-                    p.functionHandles.showWarning = false;
                     p.functionHandles.stateVariables.nextState = 'start';
                 end
                 
@@ -298,11 +292,8 @@ switch state
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     p.functionHandles.analogStickCursorObj.visible = true;
-                    p.functionHandles.showEngage = true;
                 elseif(p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     fprintf('\tAnalog stick engaged after %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                    p.functionHandles.showHold = true;
-                    p.functionHandles.showEngage = false;
                     p.functionHandles.stateVariables.nextState = 'hold';
                 end
                 
@@ -338,12 +329,9 @@ switch state
                 %  position.
                 if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.presentationDuration))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
-                    p.functionHandles.showSymbols = true;
-                    p.functionHandles.symbolPhase = 1;
                 end
                 if(p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     if(p.functionHandles.stateVariables.timeInStateElapsed)
-                        p.functionHandles.showHold = false;
                         p.functionHandles.stateVariables.nextState = 'delay';
                     end
                 else
@@ -353,7 +341,6 @@ switch state
                         'abortMessage','prematureAnalogStickMovement',...
                         'abortTime',GetSecs);
                     p.functionHandles.analogStickCursorObj.visible = false;
-                    p.functionHandles.showSymbols = false;
                     p.functionHandles.stateVariables.nextState = 'penalty';
                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
@@ -370,7 +357,6 @@ switch state
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
                 end
                 if(p.functionHandles.stateVariables.timeInStateElapsed)
-                    p.functionHandles.showHold = false;
                     p.functionHandles.stateVariables.nextState = 'probe';
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     
@@ -383,7 +369,6 @@ switch state
                         'abortMessage','prematureAnalogStickMovement',...
                         'abortTime',GetSecs);
                     p.functionHandles.analogStickCursorObj.visible = false;
-                    p.functionHandles.showSymbols = false;
                     p.functionHandles.stateVariables.nextState = 'penalty';
                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
 %                 elseif(false)
@@ -396,7 +381,6 @@ switch state
 %                         'abortMessage','prematureFixationBreak',...
 %                         'abortTime',GetSecs);
 %                     p.functionHandles.analogStickCursorObj.visible = false;
-%                     p.functionHandles.showSymbols = false;
 %                     p.functionHandles.stateVariables.nextState = 'penalty';
 %                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
@@ -425,7 +409,6 @@ switch state
                         'abortMessage','PrematureAnalogStickMovement',...
                         'abortTime',GetSecs);
                     p.functionHandles.analogStickCursorObj.visible = false;
-                    p.functionHandles.showSymbols = false;
                     p.functionHandles.stateVariables.nextState = 'penalty';
                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
 %                 elseif(false)
@@ -438,7 +421,6 @@ switch state
 %                         'abortMessage','prematureFixationBreak',...
 %                         'abortTime',GetSecs);
 %                     p.functionHandles.analogStickCursorObj.visible = false;
-%                     p.functionHandles.showSymbols = false;
 %                     p.functionHandles.stateVariables.nextState = 'penalty';
 %                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
@@ -470,7 +452,6 @@ switch state
                         'abortMessage','responseDurationElapsed',...
                         'abortTime',GetSecs);
                     p.functionHandles.analogStickCursorObj.visible = false;
-                    p.functionHandles.showSymbols = false;
                     p.functionHandles.stateVariables.nextState = 'penalty';
                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                     
@@ -523,7 +504,6 @@ switch state
                 %  symbols and score his response.
                 if(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
                     fprintf('\tMonkey responded %s\n',p.functionHandles.trialOutcomeObj.response);
-                    p.functionHandles.showSymbols = false;
                     if(p.functionHandles.trialOutcomeObj.correct)
                         fprintf('\tMonkey''s response was correct.\n');
                         p.functionHandles.stateVariables.nextState = 'reward';

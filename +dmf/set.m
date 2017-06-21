@@ -24,7 +24,7 @@ classdef set < handle
     %  '0000'--none of the symbols share any of four possible features.
     
     properties
-        features
+        symbolFeatures
         featureNames
         symbolCodes
         sets
@@ -39,15 +39,15 @@ classdef set < handle
             
             %  Import feature names and cell arrays
             for i=1:2:nargin
-                obj.features.(varargin{i}) = varargin{i+1};
+                obj.symbolFeatures.(varargin{i}) = varargin{i+1};
             end
             
             %  Determine number of examples of each feature
-            obj.featureNames = fieldnames(obj.features);
+            obj.featureNames = fieldnames(obj.symbolFeatures);
             nFeatures = length(obj.featureNames);
             nExamples = zeros(nFeatures,1);
             for i=1:nFeatures
-                nExamples(i) = length(obj.features.(obj.featureNames{i}));
+                nExamples(i) = length(obj.symbolFeatures.(obj.featureNames{i}));
             end
             
             %  Generate a list of all possible combinations of features
@@ -105,7 +105,7 @@ classdef set < handle
                         end
                         switch selectionCodes{j}(k)
                             case {'1','2','3'}
-                                matchedFeatures{i}{end+1} = obj.features.(obj.featureNames{k}){obj.symbolCodes(obj.sets(i,2),k)};
+                                matchedFeatures{i}{end+1} = obj.symbolFeatures.(obj.featureNames{k}){obj.symbolCodes(obj.sets(i,2),k)};
                         end
                         k = k+1;
                     end
