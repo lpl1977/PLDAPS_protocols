@@ -33,12 +33,31 @@ p.functionHandles.geometry.symbolCenters = [...
     p.functionHandles.geometry.center(1) p.functionHandles.geometry.center(2); ...
     p.functionHandles.geometry.center(1)+p.functionHandles.geometry.symbolDisplacement p.functionHandles.geometry.center(2)];
 
-%  Features
+%  Symbol features
 p.functionHandles.features.symbolRadius = p.functionHandles.geometry.symbolRadius;
 p.functionHandles.features.nSpatialCycles = 16;
 p.functionHandles.features.nThetaCycles = 8;
-p.functionHandles.features.bgColor = p.trial.display.bgColor;
 
+%  Background color
+p.functionHandles.colors.background = p.trial.display.bgColor;
+
+%  Cursor colors
+p.functionHandles.colors.cursor.start = [0 0 0];
+p.functionHandles.colors.cursor.engage = [0 0.8 0];
+p.functionHandles.colors.cursor.hold = [0.8 0.8 0.8];
+p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.delay = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.probe = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.response = [0 0 0];
+p.functionHandles.colors.cursor.warning = [0.8 0 0];
+p.functionHandles.colors.cursor.return = [0 0 0];
+p.functionHandles.colors.cursor.penalty = [0 0 0];
+p.functionHandles.colors.cursor.reward = [0 0 0];
+p.functionHandles.colors.cursor.error = [0 0 0];
+
+%  Pedestal color
+p.functionHandles.colors.pedestal = [0.4 0.4 0.4];
+p.functionHandles.features.pedestalRadius = p.functionHandles.features.symbolRadius + 20;
 %  symbolAlphas
 p.functionHandles.symbolAlphas = struct('left',[],'center',[],'right',[]);
 
@@ -56,45 +75,45 @@ dmf.adjustableParameters(p);
 %  shapes:  {'circle','square','diamond','triangle','pentagon','hexagon'}
 
 colors = {'blue','scarlet','yellow'};
-patterns = {'solid'};
+patterns = {'horizontalLines'};
 shapes = {'triangle','diamond','pentagon'};
 
-p.functionHandles.sequenceObj = dmf.sequence('colors',colors,'patterns',patterns,'shapes',shapes);
+p.functionHandles.setObj = dmf.set('colors',colors,'patterns',patterns,'shapes',shapes);
 
-[selectedSequences.left,sequenceSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.sequenceObj.selector(p.functionHandles.selectionCodes.left);
-[selectedSequences.right,sequenceSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.sequenceObj.selector(p.functionHandles.selectionCodes.right);
-[selectedSequences.center,sequenceSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.sequenceObj.selector(p.functionHandles.selectionCodes.center); 
+[selectedSets.left,setSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.left);
+[selectedSets.right,setSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.right);
+[selectedSets.center,setSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.center); 
 
-nSequencesPerResponse = lcm(lcm(size(selectedSequences.left,1),size(selectedSequences.right,1)),size(selectedSequences.center,1));
-selectedSequences.left = repmat(selectedSequences.left,nSequencesPerResponse/size(selectedSequences.left,1),1);
-selectedSequences.right = repmat(selectedSequences.right,nSequencesPerResponse/size(selectedSequences.right,1),1);
-selectedSequences.center = repmat(selectedSequences.center,nSequencesPerResponse/size(selectedSequences.center,1),1);
+nSetsPerResponse = lcm(lcm(size(selectedSets.left,1),size(selectedSets.right,1)),size(selectedSets.center,1));
+selectedSets.left = repmat(selectedSets.left,nSetsPerResponse/size(selectedSets.left,1),1);
+selectedSets.right = repmat(selectedSets.right,nSetsPerResponse/size(selectedSets.right,1),1);
+selectedSets.center = repmat(selectedSets.center,nSetsPerResponse/size(selectedSets.center,1),1);
 
-selectionCodes.left = repmat(selectionCodes.left,nSequencesPerResponse/size(selectionCodes.left,1),1);
-selectionCodes.right = repmat(selectionCodes.right,nSequencesPerResponse/size(selectionCodes.right,1),1);
-selectionCodes.center = repmat(selectionCodes.center,nSequencesPerResponse/size(selectionCodes.center,1),1);
+selectionCodes.left = repmat(selectionCodes.left,nSetsPerResponse/size(selectionCodes.left,1),1);
+selectionCodes.right = repmat(selectionCodes.right,nSetsPerResponse/size(selectionCodes.right,1),1);
+selectionCodes.center = repmat(selectionCodes.center,nSetsPerResponse/size(selectionCodes.center,1),1);
 
-sequenceSymbolCodes.left = repmat(sequenceSymbolCodes.left,nSequencesPerResponse/size(sequenceSymbolCodes.left,1),1);
-sequenceSymbolCodes.right = repmat(sequenceSymbolCodes.right,nSequencesPerResponse/size(sequenceSymbolCodes.right,1),1);
-sequenceSymbolCodes.center = repmat(sequenceSymbolCodes.center,nSequencesPerResponse/size(sequenceSymbolCodes.center,1),1);
+setSymbolCodes.left = repmat(setSymbolCodes.left,nSetsPerResponse/size(setSymbolCodes.left,1),1);
+setSymbolCodes.right = repmat(setSymbolCodes.right,nSetsPerResponse/size(setSymbolCodes.right,1),1);
+setSymbolCodes.center = repmat(setSymbolCodes.center,nSetsPerResponse/size(setSymbolCodes.center,1),1);
 
-matchedFeatures.left = repmat(matchedFeatures.left,nSequencesPerResponse/size(matchedFeatures.left,1),1);
-matchedFeatures.right = repmat(matchedFeatures.right,nSequencesPerResponse/size(matchedFeatures.right,1),1);
-matchedFeatures.center = repmat(matchedFeatures.center,nSequencesPerResponse/size(matchedFeatures.center,1),1);
+matchedFeatures.left = repmat(matchedFeatures.left,nSetsPerResponse/size(matchedFeatures.left,1),1);
+matchedFeatures.right = repmat(matchedFeatures.right,nSetsPerResponse/size(matchedFeatures.right,1),1);
+matchedFeatures.center = repmat(matchedFeatures.center,nSetsPerResponse/size(matchedFeatures.center,1),1);
 
 p.functionHandles.possibleResponses = {'left','center','right'};
 if(~isfield(p.functionHandles,'includedResponses'))
     p.functionHandles.includedResponses = unique(p.functionHandles.possibleResponses);
 end
 
-c = cell(nSequencesPerResponse*numel(p.functionHandles.includedResponses),1);
+c = cell(nSetsPerResponse*numel(p.functionHandles.includedResponses),1);
 for i=1:length(p.functionHandles.includedResponses)
-    for j=1:nSequencesPerResponse
-        c{(i-1)*nSequencesPerResponse+j}.selectedSequence = selectedSequences.(p.functionHandles.includedResponses{i})(j,:);
-        c{(i-1)*nSequencesPerResponse+j}.sequenceSymbolCode = sequenceSymbolCodes.(p.functionHandles.includedResponses{i}){j};
-        c{(i-1)*nSequencesPerResponse+j}.rewardedResponse = p.functionHandles.includedResponses{i};
-        c{(i-1)*nSequencesPerResponse+j}.selectionCode = selectionCodes.(p.functionHandles.includedResponses{i}){j};
-        c{(i-1)*nSequencesPerResponse+j}.matchedFeatures = matchedFeatures.(p.functionHandles.includedResponses{i}){j};
+    for j=1:nSetsPerResponse
+        c{(i-1)*nSetsPerResponse+j}.selectedSet = selectedSets.(p.functionHandles.includedResponses{i})(j,:);
+        c{(i-1)*nSetsPerResponse+j}.setSymbolCode = setSymbolCodes.(p.functionHandles.includedResponses{i}){j};
+        c{(i-1)*nSetsPerResponse+j}.rewardedResponse = p.functionHandles.includedResponses{i};
+        c{(i-1)*nSetsPerResponse+j}.selectionCode = selectionCodes.(p.functionHandles.includedResponses{i}){j};
+        c{(i-1)*nSetsPerResponse+j}.matchedFeatures = matchedFeatures.(p.functionHandles.includedResponses{i}){j};
     end
 end
 p.conditions = cell(numel(c)*10,1);
@@ -102,6 +121,22 @@ p.conditions = cell(numel(c)*10,1);
 %  Session termination criteria--set finish to Inf because we are using the
 %  trial manager
 p.trial.pldaps.finish = Inf;
+
+%  Generate symbol textures
+p.functionHandles.graphicsManagerObj = dmf.graphicsManager(...
+    'symbolFeatures',p.functionHandles.setObj.symbolFeatures,...
+    'symbolCodes',p.functionHandles.setObj.symbolCodes,...
+    'symbolRadius',p.functionHandles.features.symbolRadius,...
+    'colorLibrary',p.trial.display.colors,...
+    'windowPtr',p.trial.display.ptr,...
+    'pedestalRadius',p.functionHandles.features.pedestalRadius,...
+    'patternProperties',p.functionHandles.features.nSpatialCycles);
+
+%  Initialize frame textures
+p.functionHandles.graphicsManagerObj.initializeFrameTextures(...
+    {'presentation','delay','probe','response','return'},...
+    {true(1,3),true(1,3),true(1,3),true(1,3),true(1,3)},...
+    p.functionHandles.geometry.symbolCenters);
 
 %  Initialize trial management
 p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'numDecks',2);

@@ -1,14 +1,14 @@
-classdef sequence < handle
-    %sequence class for generating symbol sequences in feature matching
-    %  S = sequence({'a1','a2',...},{'b1','b2',...},{'c1','c2',...},...)
+classdef set < handle
+    %set class for generating symbol sets in feature matching
+    %  S = set({'a1','a2',...},{'b1','b2',...},{'c1','c2',...},...)
     %
     %  Input arguments are cell arrays of all possible examples for each
     %  feature.
     %
-    %  [selectedSequences,satisfiedSelectionCodes] = S.selector(selectionCodes)
+    %  [selectedSets,satisfiedSelectionCodes] = S.selector(selectionCodes)
     %
     %  selectionCodes is a character code string or cell array of strings
-    %  to select sequences based on whether or not their symbols share
+    %  to select sets based on whether or not their symbols share
     %  specific features.  Position of the character determines the feature
     %  to which it applies. Selection codes are specified as follows:
     %  0--no symbols share the feature
@@ -24,30 +24,30 @@ classdef sequence < handle
     %  '0000'--none of the symbols share any of four possible features.
     
     properties
-        features
+        symbolFeatures
         featureNames
         symbolCodes
-        sequences
+        sets
     end
     
     methods
         
         %  Class constructor
         %
-        %  Produce all possible sequences of three symbols
-        function obj = sequence(varargin)
+        %  Produce all possible sets of three symbols
+        function obj = set(varargin)
             
             %  Import feature names and cell arrays
             for i=1:2:nargin
-                obj.features.(varargin{i}) = varargin{i+1};
+                obj.symbolFeatures.(varargin{i}) = varargin{i+1};
             end
             
             %  Determine number of examples of each feature
-            obj.featureNames = fieldnames(obj.features);
+            obj.featureNames = fieldnames(obj.symbolFeatures);
             nFeatures = length(obj.featureNames);
             nExamples = zeros(nFeatures,1);
             for i=1:nFeatures
-                nExamples(i) = length(obj.features.(obj.featureNames{i}));
+                nExamples(i) = length(obj.symbolFeatures.(obj.featureNames{i}));
             end
             
             %  Generate a list of all possible combinations of features
@@ -55,36 +55,36 @@ classdef sequence < handle
             obj.symbolCodes = obj.comblist(nExamples);
             nsymbols = size(obj.symbolCodes,1);
             
-            %  Generate a list of all possible sequences of three symbols
-            obj.sequences = obj.comblist(nsymbols*ones(1,3));
+            %  Generate a list of all possible sets of three symbols
+            obj.sets = obj.comblist(nsymbols*ones(1,3));
         end
         
         %  Selector
         %
-        %  Select possible sequences based on selection codes.  If multiple
-        %  codes are provided then the output will reflect all sequences
+        %  Select possible sets based on selection codes.  If multiple
+        %  codes are provided then the output will reflect all sets
         %  that satisfy at least one of the codes.
-        function [selectedSequences,sequenceSymbolCodes,satisfiedSelectionCodes,matchedFeatures] = selector(obj,selectionCodes)
+        function [selectedSets,setSymbolCodes,satisfiedSelectionCodes,matchedFeatures] = selector(obj,selectionCodes)
             
-            %  Number of sequences, selectionCodes, and features
-            nSequences = size(obj.sequences,1);
+            %  Number of sets, selectionCodes, and features
+            nSets = size(obj.sets,1);
             if(~iscell(selectionCodes))
                 selectionCodes = {selectionCodes};
             end
             
             %  Create logical index vector indicating satisfaction of the
             %  UNION of the selection codes.
-            indx = false(nSequences,1);
+            indx = false(nSets,1);
             
             %  Track which selection codes were satisfied
-            satisfiedSelectionCodes = cell(nSequences,1);
+            satisfiedSelectionCodes = cell(nSets,1);
             
             %  Track matched features
-            matchedFeatures = cell(nSequences,1);
+            matchedFeatures = cell(nSets,1);
             
             %  Apply the selection codes sequentially to each feature of
-            %  each sequence
-            for i=1:nSequences
+            %  each set
+            for i=1:nSets
                 j = 0;
                 while ~indx(i) && j<length(selectionCodes)
                     j = j+1;
@@ -93,19 +93,19 @@ classdef sequence < handle
                     while indx(i) && k<=min(length(selectionCodes{j}),size(obj.symbolCodes,2))
                         switch selectionCodes{j}(k)
                             case '0'
-                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)~=obj.symbolCodes(obj.sequences(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sets(i,1),k)~=obj.symbolCodes(obj.sets(i,2),k) && obj.symbolCodes(obj.sets(i,1),k)~=obj.symbolCodes(obj.sets(i,3),k) && obj.symbolCodes(obj.sets(i,2),k)~=obj.symbolCodes(obj.sets(i,3),k);
                             case '1'
-                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)~=obj.symbolCodes(obj.sequences(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sets(i,1),k)==obj.symbolCodes(obj.sets(i,2),k) && obj.symbolCodes(obj.sets(i,1),k)~=obj.symbolCodes(obj.sets(i,3),k) && obj.symbolCodes(obj.sets(i,2),k)~=obj.symbolCodes(obj.sets(i,3),k);
                             case '2'
-                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)~=obj.symbolCodes(obj.sequences(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sets(i,1),k)~=obj.symbolCodes(obj.sets(i,2),k) && obj.symbolCodes(obj.sets(i,1),k)==obj.symbolCodes(obj.sets(i,3),k) && obj.symbolCodes(obj.sets(i,2),k)~=obj.symbolCodes(obj.sets(i,3),k);
                             case '3'
-                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)~=obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)==obj.symbolCodes(obj.sequences(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sets(i,1),k)~=obj.symbolCodes(obj.sets(i,2),k) && obj.symbolCodes(obj.sets(i,1),k)~=obj.symbolCodes(obj.sets(i,3),k) && obj.symbolCodes(obj.sets(i,2),k)==obj.symbolCodes(obj.sets(i,3),k);
                             case '4'
-                                indx(i) = obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,2),k) && obj.symbolCodes(obj.sequences(i,1),k)==obj.symbolCodes(obj.sequences(i,3),k) && obj.symbolCodes(obj.sequences(i,2),k)==obj.symbolCodes(obj.sequences(i,3),k);
+                                indx(i) = obj.symbolCodes(obj.sets(i,1),k)==obj.symbolCodes(obj.sets(i,2),k) && obj.symbolCodes(obj.sets(i,1),k)==obj.symbolCodes(obj.sets(i,3),k) && obj.symbolCodes(obj.sets(i,2),k)==obj.symbolCodes(obj.sets(i,3),k);
                         end
                         switch selectionCodes{j}(k)
                             case {'1','2','3'}
-                                matchedFeatures{i}{end+1} = obj.features.(obj.featureNames{k}){obj.symbolCodes(obj.sequences(i,2),k)};
+                                matchedFeatures{i}{end+1} = obj.symbolFeatures.(obj.featureNames{k}){obj.symbolCodes(obj.sets(i,2),k)};
                         end
                         k = k+1;
                     end
@@ -113,15 +113,15 @@ classdef sequence < handle
                 satisfiedSelectionCodes{i} = selectionCodes{j};
             end
             
-            %  Generate list of selected sequences
-            selectedSequences = obj.sequences(indx,:);
+            %  Generate list of selected sets
+            selectedSets = obj.sets(indx,:);
             satisfiedSelectionCodes = satisfiedSelectionCodes(indx);
             matchedFeatures = matchedFeatures(indx);
-            sequenceSymbolCodes = cell(sum(indx),1);
-            for i=1:length(sequenceSymbolCodes)
-                sequenceSymbolCodes{i} = zeros(size(selectedSequences,2),size(obj.symbolCodes,2));
-                for j=1:size(selectedSequences,2)
-                    sequenceSymbolCodes{i}(j,:) = obj.symbolCodes(selectedSequences(i,j),:);
+            setSymbolCodes = cell(sum(indx),1);
+            for i=1:length(setSymbolCodes)
+                setSymbolCodes{i} = zeros(size(selectedSets,2),size(obj.symbolCodes,2));
+                for j=1:size(selectedSets,2)
+                    setSymbolCodes{i}(j,:) = obj.symbolCodes(selectedSets(i,j),:);
                 end
             end
         end
