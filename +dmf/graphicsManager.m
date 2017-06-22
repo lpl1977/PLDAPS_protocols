@@ -27,15 +27,24 @@ classdef graphicsManager < handle
         
         textureWidth
         
-        frameTextures
-        frameConfig
+        centeredRects
+        
+        textures
+        
+        queryStates
+        instructStates
+        
+        stateNames
+        
+        trainingMode = false;
+        trainingAlpha = 1;
     end
     
     methods
         
         %  Class constructor
         %
-        %  Produce symbol textures
+        %
         function obj = graphicsManager(varargin)
             
             %  Input arguments
@@ -43,9 +52,16 @@ classdef graphicsManager < handle
                 obj.(varargin{i}) = varargin{i+1};
             end
             
+            %  Prepare frequently used variables
             obj.textureWidth = 2*obj.pedestalRadius;
             obj.pedestalRect = [0 0 obj.textureWidth obj.textureWidth];
-            
+            obj.centeredRects = CenterRectOnPoint(obj.pedestalRect,obj.symbolCenters(:,1),obj.symbolCenters(:,2))';
+            obj.stateNames = unique([obj.queryStates obj.instructStates]);
+            obj.textures = zeros(length(obj.stateNames),1);
+            for i=1:length(obj.textures)
+                obj.textures(i) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
+            end
+
             %  Generate pedestal texture
             obj.pedestalTexture = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor,obj.pedestalRect);
             Screen('FillOval',obj.pedestalTexture,obj.pedestalColor,obj.pedestalRect);
@@ -81,10 +97,6 @@ classdef graphicsManager < handle
                 Screen('FramePoly',obj.symbolTextures(i),symbolColor,polygonVertices(symbolShape),2);
             end
             
-            %
-            %  Nested functions for class constructor
-            %
-            
             %  nested function polygonVertices
             function vertices = polygonVertices(shape)
                 switch shape
@@ -111,7 +123,7 @@ classdef graphicsManager < handle
                 vertices = vertices + repmat([obj.pedestalRadius obj.pedestalRadius],size(vertices,1),1);
             end
             
-            %  nested function alpha mask for pattern
+            %  nested function patternMask
             function mask = patternMask(pattern)
                 
                 d = obj.pedestalRadius/obj.symbolRadius;
@@ -137,77 +149,64 @@ classdef graphicsManager < handle
             end
         end
         
-        %  initializeFrameTextures
-        %
-        %  Call during setup to association state names and configurations
-        %  with textures
-        function obj = initializeFrameTextures(obj,states,config,centers)
-            
-            %  Create structure from frame textures
-            for i = 1:length(states)
-                obj.frameTextures.(states{i}) = [];
-                obj.frameConfig.(states{i}) = config{i};
-            end
-            
-            obj.symbolCenters = centers;
-        end
         
-        %  getFrameTexture
+        %  Class destructor
         %
-        %  function to retrieve the named frame texture
-        function texture = getFrameTexture(obj,state)
-            
-            %  Check state against list
-            if(~isfield(obj.frameTextures,state))
-                obj.frameTextures.(state) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
-            end
-            texture = obj.frameTextures.(state);
-        end
-        
-        %  prepareFrameTextures
         %
-        %  Call during trial preparation to produce frame textures for
-        %  display
-        function obj = prepareFrameTextures(obj,selectedSet)
-            
-            %  Iterate over frames specified in the configuration
-            states = fieldnames(obj.frameConfig);
-            for i=1:length(states)
-                
-                %  Close texture pointer and recreate it
-                obj.frameTextures.(states{i}) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
-                
-                %  Iterate over positions in the configuration
-                for j=1:3
-                    centeredRect = CenterRectOnPoint(obj.pedestalRect,obj.symbolCenters(j,1),obj.symbolCenters(j,2));                    
-                    if(obj.frameConfig.(states{i})(j))
-                        Screen('DrawTexture',obj.frameTextures.(states{i}),obj.symbolTextures(selectedSet(j)),[],centeredRect);
-                    else
-                        Screen('DrawTexture',obj.frameTextures.(states{i}),obj.pedestalTexture,[],centeredRect);
-                    end
-                end
-            end
-        end
-        
-        %  trialCleanUp
-        %
-        %  Close frame textures to prevent excessive buildup
-        function obj = trialCleanUp(obj)
-           
-            %  Iterate over frames specified in the configuration
-            states = fieldnames(obj.frameConfig);
-            for i=1:length(states)
-                Screen('Close',obj.frameTextures.(states{i}));
-            end
-        end
-        
-        %  cleanUp
-        %
-        %  close all texture pointers
-        function obj = cleanUp(obj)
+        function delete(obj)
             Screen('Close',obj.pedestalTexture);
             Screen('Close',obj.symbolTextures);
+            Screen('Close',obj.textures);
         end
+        
+        %  getTexture
+        %
+        %  Retrieve the texture associated with a state
+        function texture = getTexture(obj,state)
+            
+            %  Check requested state against list
+            indx = strcmpi(state,obj.stateNames);
+            if(~indx)
+                texture = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
+                obj.textures(end+1) = texture;
+                obj.stateNames = [obj.stateNames {state}];
+            else
+                texture = obj.textures(indx);
+            end
+        end
+        
+        %  prepareTextures
+        %
+        %  Call during trial preparation to produce textures for each state
+        function obj = prepareTextures(obj,selectedSet,rewardedResponse)
+            
+            %  Set textureAlphas based on training mode
+            textureAlphas = ones(3,1);
+            if(obj.trainingMode)
+                textureAlphas(~strcmp(rewardedResponse,{'left','center','right'})) = obj.trainingAlpha;
+            end
+            
+            %  Iterate over states specified in the configuration
+            for i=1:length(obj.stateNames)
+                
+                %  Configuration specifies in which frames the comparators
+                %  and probe appear
+                if(any(strcmpi(obj.stateNames{i},[obj.instructStates obj.queryStates])))
+                    indx = strcmpi(obj.stateNames{i},obj.stateNames);
+                    Screen('Close',obj.textures(indx));
+                    obj.textures(indx) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
+                    texturePtrs([1 2 3]) = obj.pedestalTexture;
+                    if(any(strcmpi(obj.stateNames{i},obj.instructStates)))
+                        texturePtrs(1) = obj.symbolTextures(selectedSet(1));
+                        texturePtrs(3) = obj.symbolTextures(selectedSet(3));
+                    end
+                    if(any(strcmpi(obj.stateNames{i},obj.queryStates)))
+                        texturePtrs(2) = obj.symbolTextures(selectedSet(2));
+                    end
+                    Screen('DrawTextures',obj.textures(indx),texturePtrs,[],obj.centeredRects,[],[],textureAlphas);
+                end
+            end
+        end 
     end
 end
 

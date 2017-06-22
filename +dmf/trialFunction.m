@@ -7,6 +7,7 @@ function p = trialFunction(p,state)
 %  Why does it sometimes go over 540?
 %  How do I do blocks?
 %  How can I more flexibly set the number of trials?
+%  Reward manager that will remove need to specify arduino or not
 
 switch state
     
@@ -75,7 +76,7 @@ switch state
         %  before trial start!
         
         %  Create textures for display
-        p.functionHandles.graphicsManagerObj.prepareFrameTextures(p.trial.condition.selectedSet);
+        p.functionHandles.graphicsManagerObj.prepareTextures(p.trial.condition.selectedSet,p.trial.condition.rewardedResponse);
         
         %  Echo trial specs to screen
         fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
@@ -114,12 +115,6 @@ switch state
         end
         p.trial.trialRecord.outcome = p.functionHandles.trialOutcomeObj.commit;
         fprintf('\n');
-        
-        %  Cleanup textures
-        p.functionHandles.graphicsManagerObj.trialCleanUp;        
-        if(p.trial.pldaps.quit==2)
-            p.functionHandles.graphicsManagerObj.cleanUp;
-        end
         
         %  Track performance
         p.functionHandles.performanceTrackingObj.update(p.functionHandles.trialOutcomeObj);
@@ -184,9 +179,9 @@ switch state
         %  if there is a call to a function calling Screen, put it here!
         
         %  Write appropriate texture into the display pointer
-        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.graphicsManagerObj.getFrameTexture(p.functionHandles.stateVariables.nextState));
+        Screen('DrawTexture',p.trial.display.ptr,p.functionHandles.graphicsManagerObj.getTexture(p.functionHandles.stateVariables.nextState));
         
-        %  Draw the cursor
+        %  Draw in the cursor
         horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
         screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*horizontalSpan),p.functionHandles.geometry.center(1)-0.5*horizontalSpan);        

@@ -102,24 +102,11 @@ else
                 case 'meatball'
                 case 'splinter'
                 case 'debug'
+                    p.functionHandles.graphicsManagerObj.trainingMode = true;
+                    p.functionHandles.graphicsManagerObj.trainingAlpha = 0.5;
             end
             
         case p.trial.pldaps.trialStates.trialSetup
-            
-            %  Symbol alpha
-            switch lower(p.trial.session.subject)
-                case 'murray'
-                    symbolAlphas = 1.0; % + 0.5*(p.functionHandles.trialManagerObj.repetitionNumber<4);
-                case 'meatball'
-                    symbolAlphas = 1;
-                case 'splinter'
-                    symbolAlphas = 0.5;
-                case 'debug'
-                    symbolAlphas = 1.0; %0.5 + 0.5*(p.functionHandles.trialManagerObj.repetitionNumber<1);
-            end
-            p.functionHandles.symbolAlphas.left = [ones(1,3); symbolAlphas*ones(2,3)];
-            p.functionHandles.symbolAlphas.center = [symbolAlphas*ones(1,3); ones(1,3); symbolAlphas*ones(1,3)];
-            p.functionHandles.symbolAlphas.right = [symbolAlphas*ones(2,3); ones(1,3)];
             
             %  Reward
             p.functionHandles.reward = 0.5;
@@ -131,10 +118,10 @@ else
             p.functionHandles.timing.errorPenaltyDuration = 2;
             p.functionHandles.timing.penaltyDuration = 10;
             p.functionHandles.timing.holdDelay = 0;
-            p.functionHandles.timing.presentationDuration = 2;
-            p.functionHandles.timing.delayDuration = 1;
-            p.functionHandles.timing.probeDuration = 0.25;
-            
+            p.functionHandles.timing.presentationDuration = 0;
+            p.functionHandles.timing.delayDuration = 0.1;
+            p.functionHandles.timing.probeDuration = 0;
+                        
             switch lower(p.trial.session.subject)
                 case 'murray'
                     %  Careful!  Murray seems to boycott if the reward rate
