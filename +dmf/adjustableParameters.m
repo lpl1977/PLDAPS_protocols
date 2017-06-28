@@ -100,27 +100,26 @@ else
             switch lower(p.trial.session.subject)
                 case 'murray'
                 case 'meatball'
+                    p.functionHandles.graphicsManagerObj.trainingMode = false;
+                    p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
+                    p.functionHandles.stateTiming.hold = 0.5;
+                    p.functionHandles.stateTiming.proposition = 0;
+                    p.functionHandles.graphicsManagerObj.configuration.response = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.configuration.return = [1 1 1];
                 case 'splinter'
                 case 'debug'
-                    p.functionHandles.graphicsManagerObj.trainingMode = true;
-                    p.functionHandles.graphicsManagerObj.trainingAlpha = 0.5;
+                    p.functionHandles.graphicsManagerObj.trainingMode = false;
+                    p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
+                    p.functionHandles.stateTiming.hold = 0.1;
+                    p.functionHandles.stateTiming.proposition = 0;
+                    p.functionHandles.graphicsManagerObj.configuration.response = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.configuration.return = [1 1 1];
             end
             
         case p.trial.pldaps.trialStates.trialSetup
             
             %  Reward
             p.functionHandles.reward = 0.5;
-            
-            %  Timing
-            p.functionHandles.timing.responseDuration = 10;
-            p.functionHandles.timing.rewardDuration = 0.7;
-            p.functionHandles.timing.errorDuration = p.functionHandles.timing.rewardDuration;
-            p.functionHandles.timing.errorPenaltyDuration = 2;
-            p.functionHandles.timing.penaltyDuration = 10;
-            p.functionHandles.timing.holdDelay = 0;
-            p.functionHandles.timing.presentationDuration = 0;
-            p.functionHandles.timing.delayDuration = 0.1;
-            p.functionHandles.timing.probeDuration = 0;
                         
             switch lower(p.trial.session.subject)
                 case 'murray'

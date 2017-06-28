@@ -45,6 +45,12 @@ p.functionHandles.colors.background = p.trial.display.bgColor;
 p.functionHandles.colors.cursor.start = [0 0 0];
 p.functionHandles.colors.cursor.engage = [0 0.8 0];
 p.functionHandles.colors.cursor.hold = [0.8 0.8 0.8];
+p.functionHandles.colors.cursor.proposition = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.postPropositionDelay = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.argument = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.postArgumentDelay = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
 p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
 p.functionHandles.colors.cursor.delay = p.functionHandles.colors.cursor.hold;
 p.functionHandles.colors.cursor.probe = p.functionHandles.colors.cursor.hold;
@@ -58,6 +64,28 @@ p.functionHandles.colors.cursor.error = [0 0 0];
 %  Pedestal color
 p.functionHandles.colors.pedestal = [0.4 0.4 0.4];
 p.functionHandles.features.pedestalRadius = p.functionHandles.features.symbolRadius + 20;
+
+
+%  Timing
+p.functionHandles.timing.responseDuration = 10;
+p.functionHandles.timing.rewardDuration = 0.7;
+p.functionHandles.timing.errorDuration = p.functionHandles.timing.rewardDuration;
+p.functionHandles.timing.errorPenaltyDuration = 2;
+p.functionHandles.timing.penaltyDuration = 10;
+p.functionHandles.timing.holdDelay = 0;
+p.functionHandles.timing.presentationDuration = 0;
+p.functionHandles.timing.delayDuration = 0.1;
+p.functionHandles.timing.probeDuration = 0;
+
+p.functionHandles.stateTiming.hold = 0.1;
+p.functionHandles.stateTiming.proposition = 0.5;
+p.functionHandles.stateTiming.postPropositionDelay = 0.5;
+p.functionHandles.stateTiming.argument = 0.5;
+p.functionHandles.stateTiming.postArgumentDelay = 0.5;
+p.functionHandles.stateTiming.response = 10;
+p.functionHandles.stateTiming.reward = 0.7;
+p.functionHandles.stateTiming.error = 0.7;
+p.functionHandles.stateTiming.penalty = 2;
 
 %  Set subject dependent parameters
 dmf.adjustableParameters(p);
@@ -129,9 +157,8 @@ p.functionHandles.graphicsManagerObj = dmf.graphicsManager(...
     'windowPtr',p.trial.display.ptr,...
     'pedestalRadius',p.functionHandles.features.pedestalRadius,...
     'patternProperties',p.functionHandles.features.nSpatialCycles,...
-    'stateNames',{'presentation','delay','probe','response','return'},...
-    'instructStates',{'presentation' 'delay' 'probe' 'response' 'return'},...
-    'queryStates',{'presentation' 'delay' 'probe' 'response' 'return'});
+    'stateNames',{'proposition','argument','response','return'},...
+    'configuration',{[1 0 1],[0 1 0],[1 0 1],[1 0 1]});
 
 %  Initialize trial management
 p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'numDecks',2);

@@ -16,7 +16,7 @@ classdef graphicsManager < handle
         patternProperties
         
         pedestalTexture
-        pedestalColor = [0.4 0.4 0.4];
+        pedestalColor = [0.5 0.5 0.5];
         pedestalRadius
         pedestalRect
         
@@ -31,8 +31,9 @@ classdef graphicsManager < handle
         
         textures
         
-        queryStates
-        instructStates
+        configuration
+%        queryStates
+%        instructStates
         
         stateNames
         
@@ -52,11 +53,13 @@ classdef graphicsManager < handle
                 obj.(varargin{i}) = varargin{i+1};
             end
             
+            %  Insert data
+            obj.configuration = cell2struct(obj.configuration,obj.stateNames,2);
+            
             %  Prepare frequently used variables
             obj.textureWidth = 2*obj.pedestalRadius;
             obj.pedestalRect = [0 0 obj.textureWidth obj.textureWidth];
             obj.centeredRects = CenterRectOnPoint(obj.pedestalRect,obj.symbolCenters(:,1),obj.symbolCenters(:,2))';
-            obj.stateNames = unique([obj.queryStates obj.instructStates]);
             obj.textures = zeros(length(obj.stateNames),1);
             for i=1:length(obj.textures)
                 obj.textures(i) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
@@ -170,33 +173,30 @@ classdef graphicsManager < handle
         %  Call during trial preparation to produce textures for each state
         function obj = prepareTextures(obj,selectedSet,rewardedResponse)
             
-            %  Set textureAlphas based on training mode
-            textureAlphas = ones(3,1);
-            if(obj.trainingMode)
-                textureAlphas(~strcmp(rewardedResponse,{'left','center','right'})) = obj.trainingAlpha;
-            end
             
             %  Iterate over states specified in the configuration
             for i=1:length(obj.stateNames)
                 
                 %  Configuration specifies in which frames the comparators
                 %  and probe appear
-                if(any(strcmpi(obj.stateNames{i},[obj.instructStates obj.queryStates])))
+                if(isfield(obj.configuration,obj.stateNames{i}))
+                    
+                    %  Set textureAlphas based on configuration and training mode
+                    textureAlphas = obj.configuration.(obj.stateNames{i});
+                    if(obj.trainingMode)
+                        textureAlphas(~strcmp(rewardedResponse,{'left','center','right'})) = obj.trainingAlpha;
+                    end
+                    
                     indx = strcmpi(obj.stateNames{i},obj.stateNames);
                     Screen('Close',obj.textures(indx));
                     obj.textures(indx) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
-                    texturePtrs([1 2 3]) = obj.pedestalTexture;
-                    if(any(strcmpi(obj.stateNames{i},obj.instructStates)))
-                        texturePtrs(1) = obj.symbolTextures(selectedSet(1));
-                        texturePtrs(3) = obj.symbolTextures(selectedSet(3));
-                    end
-                    if(any(strcmpi(obj.stateNames{i},obj.queryStates)))
-                        texturePtrs(2) = obj.symbolTextures(selectedSet(2));
-                    end
+                    texturePtrs(1) = obj.symbolTextures(selectedSet(1));
+                    texturePtrs(2) = obj.symbolTextures(selectedSet(2));
+                    texturePtrs(3) = obj.symbolTextures(selectedSet(3));
                     Screen('DrawTextures',obj.textures(indx),texturePtrs,[],obj.centeredRects,[],[],textureAlphas);
                 end
             end
-        end 
+        end
     end
 end
 

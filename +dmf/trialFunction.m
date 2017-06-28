@@ -288,34 +288,38 @@ switch state
                 %  before we are ready to show the symbols.  He will wait
                 %  the hold duration before the symbol presentation begins.
                 %  He can move his eyes as much as he likes in this state.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.holdDelay))
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.hold))
                     fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     fprintf('\tMonkey will be required to hold the analog stick for %5.3f sec.\n',p.functionHandles.stateVariables.timeRemainingInState);
                 end
                 if(p.functionHandles.stateVariables.timeInStateElapsed)
                     fprintf('\tMonkey kept analog stick engaged for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                    p.functionHandles.stateVariables.nextState = 'presentation';
+                    if(p.functionHandles.stateTiming.proposition>0)
+                        p.functionHandles.stateVariables.nextState = 'proposition';
+                    else
+                        p.functionHandles.stateVariables.nextState = 'response';
+                    end
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'warning';
                 end
                 
-            case 'presentation'
+            case 'proposition'
                 
-                %  STATE:  presentation
+                %  STATE:  proposition
                 %
-                %  Show the symbols for presentation duration.  Advance to
-                %  delay once he fixates the center symbol.  He must keep
+                %  Show the symbols for proposition.  Advance to delay once
+                %  he fixates the center symbol position.  He must keep
                 %  joystick engaged the entire time.  During this state he
                 %  may move his eyes as much as he likes to examine the
-                %  symbols, but he may not move the joystick out of
+                %  stimulus, but he may not move the joystick out of
                 %  position.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.presentationDuration))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.proposition))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                 end
                 if(p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     if(p.functionHandles.stateVariables.timeInStateElapsed)
-                        p.functionHandles.stateVariables.nextState = 'delay';
+                        p.functionHandles.stateVariables.nextState = 'postPropositionDelay';
                     end
                 else
                     fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
@@ -328,19 +332,18 @@ switch state
                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
                 
-            case 'delay'
+            case 'postPropositionDelay'
                 
-                %  STATE:  delay
+                %  STATE:  postPropositionDelay
                 %
-                %  This is a delay between the first presentation of
-                %  symbols and the probe symbol.  He must maintain fixation
-                %  and hold the joystick in window for duration of delay
-                %  period.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.delayDuration))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                %  This is a delay between the proposition and the
+                %  argument.  He must maintain fixation and hold the
+                %  joystick in window for duration of delay period.
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.postPropositionDelay))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                 end
                 if(p.functionHandles.stateVariables.timeInStateElapsed)
-                    p.functionHandles.stateVariables.nextState = 'probe';
+                    p.functionHandles.stateVariables.nextState = 'argument';
                 elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
                     
                     %  Monkey has moved the analog stick prematurely.
@@ -368,16 +371,16 @@ switch state
 %                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
                 
-            case 'probe'
+            case 'argument'
                 
-                %  STATE:  probe
+                %  STATE:  argument
                 %
-                %  Presentation of the probe symbol.  He must maintain
+                %  Presentation of the argument symbol.  He must maintain
                 %  fixation and hold the joystick in window for a brief
                 %  delay.  Afterwards he can move the joystick and gaze to
                 %  his little heart's content.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.probeDuration))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.argument))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                 end
                 if(p.functionHandles.stateVariables.timeInStateElapsed)
                     p.functionHandles.stateVariables.nextState = 'response';
@@ -408,20 +411,59 @@ switch state
 %                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                 end
                 
+            case 'postArgumentDelay'
+                
+                %  STATE:  postArgumentDelay
+                %
+                %  This is a delay between the argument and the
+                %  resolution.  He must maintain fixation and hold the
+                %  joystick in window for duration of delay period.
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.postArgumentDelay))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                end
+                if(p.functionHandles.stateVariables.timeInStateElapsed)
+                    p.functionHandles.stateVariables.nextState = 'response';
+                elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
+                    
+                    %  Monkey has moved the analog stick prematurely.
+                    %  Since he has seen the symbols presented, this is a
+                    %  trial abort.
+                    fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                    p.functionHandles.trialOutcomeObj.recordAbort(...
+                        'abortState',p.functionHandles.stateVariables.currentState,...
+                        'abortMessage','prematureAnalogStickMovement',...
+                        'abortTime',GetSecs);
+                    p.functionHandles.analogStickCursorObj.visible = false;
+                    p.functionHandles.stateVariables.nextState = 'penalty';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.penalty;
+%                 elseif(false)
+%                     
+%                     %  Monkey broke fixation prematurely. Since he has seen
+%                     %  the symbols presented, this is a trial abort.
+%                     fprintf('\tMonkey broke fixation prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+%                     p.functionHandles.trialOutcomeObj.recordAbort(...
+%                         'abortState',p.functionHandles.stateVariables.currentState,...
+%                         'abortMessage','prematureFixationBreak',...
+%                         'abortTime',GetSecs);
+%                     p.functionHandles.analogStickCursorObj.visible = false;
+%                     p.functionHandles.stateVariables.nextState = 'penalty';
+%                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
+                end
+                
             case 'response'
                 
                 %  STATE:  response
                 %
-                %  Now we wait for the monkey to make his response.
-                %
-                %  Enter this state with the cursor in the engaged state.
-                %  He may either release the joystick or move the joystick
-                %  left or right.  His default response is center.  He
-                %  chooses center by allowing the joystick to return to
-                %  neutral without first choosing left or right.
+                %  Present the symbols from the proposition and monkey can
+                %  make his selection.  Enter this state with the cursor in
+                %  the engaged state. He may either release the joystick or
+                %  move the joystick left or right.  His default response
+                %  is center.  He chooses center by allowing the joystick
+                %  to return to neutral without first choosing left or
+                %  right.
                 
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.responseDuration))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.response))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     fprintf('\tMonkey will have %5.3f sec to make his response.\n',p.functionHandles.stateVariables.timeRemainingInState);
                 end
                 
@@ -474,7 +516,7 @@ switch state
                 %  to the neutral position before he can get his reward.
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                 end
                 
                 %  Turn the cursor off as soon as it's left the response
@@ -503,8 +545,8 @@ switch state
                 %  Monkey has correctly made his choice.  Give him a reward
                 %  and then advance to the next trial.
                 
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.rewardDuration))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.reward))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     pds.audio.play(p,'reward',1);
                     
                     %  Provide reward
@@ -540,13 +582,13 @@ switch state
                 %  Monkey has incorrectly made his choice.  Give him an
                 %  error tone and then advance to the penalty phase.
                 
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.timing.errorDuration))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.error))
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                     pds.audio.play(p,'incorrect',1);
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     pds.audio.stop(p,'incorrect');
                     p.functionHandles.stateVariables.nextState = 'penalty';
-                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.errorPenaltyDuration;
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.penalty;
                 end
                 
             case 'penalty'
@@ -557,7 +599,7 @@ switch state
                 %  we want to discourage.  He will now get a time penalty.
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.nextState));
+                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     p.trial.flagNextTrial = true;
                 end
