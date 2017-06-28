@@ -149,16 +149,6 @@ classdef graphicsManager < handle
             end
         end
         
-        
-        %  Class destructor
-        %
-        %
-        function delete(obj)
-            Screen('Close',obj.pedestalTexture);
-            Screen('Close',obj.symbolTextures);
-            Screen('Close',obj.textures);
-        end
-        
         %  getTexture
         %
         %  Retrieve the texture associated with a state
