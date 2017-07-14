@@ -29,11 +29,19 @@ if(nargin==1)
     
     switch lower(p.trial.session.subject)
         case 'murray'
-            p.functionHandles.includedResponses = {'left','center','right'};      
-
-            p.functionHandles.selectionCodes.left = {'441'};
-            p.functionHandles.selectionCodes.center = {'440','442','444'};
-            p.functionHandles.selectionCodes.right = {'443'};
+            p.functionHandles.includedResponses = {'left','center','right'};   
+            
+            colors = {'blue','scarlet','yellow'};
+            patterns = {'solid'};
+            shapes = {'triangle','diamond','pentagon'};
+            
+            p.functionHandles.selectionCodes.left = {'144'};
+            p.functionHandles.selectionCodes.center = {'044','244','444'};
+            p.functionHandles.selectionCodes.right = {'344'};
+% 
+%             p.functionHandles.selectionCodes.left = {'441'};
+%             p.functionHandles.selectionCodes.center = {'440','442','444'};
+%             p.functionHandles.selectionCodes.right = {'443'};
             
 %             p.functionHandles.selectionCodes.left = {...
 %                 '140','142','144'};
@@ -56,14 +64,14 @@ if(nargin==1)
 
         case 'meatball'
             p.functionHandles.includedResponses = {'left','center','right'};   
-
-            p.functionHandles.selectionCodes.left = {'441'};
-            p.functionHandles.selectionCodes.center = {'440','442','444'};
-            p.functionHandles.selectionCodes.right = {'443'};
             
-%             p.functionHandles.selectionCodes.left = {'144'};
-%             p.functionHandles.selectionCodes.center = {'044','244','444'};
-%             p.functionHandles.selectionCodes.right = {'344'};
+            colors = {'blue','scarlet','yellow'};
+            patterns = {'solid'};
+            shapes = {'triangle','diamond','pentagon'};
+            
+            p.functionHandles.selectionCodes.left = {'144'};
+            p.functionHandles.selectionCodes.center = {'044','244','444'};
+            p.functionHandles.selectionCodes.right = {'344'};
             
 %             p.functionHandles.selectionCodes.left = {...
 %                 '140','142','144'};
@@ -82,12 +90,28 @@ if(nargin==1)
             p.functionHandles.selectionCodes.right = {'443'};
         
         case 'debug'
-            p.functionHandles.includedResponses = {'left','center','right'}; 
+            p.functionHandles.includedResponses = {'left','center','right'};   
+            
+            colors = {'blue','scarlet','yellow'};
+            patterns = {'solid','horizontalLines'};
+            shapes = {'triangle','diamond','pentagon'};
+            
+            p.functionHandles.selectionCodes.left = {'144'};
+            p.functionHandles.selectionCodes.center = {'044','244','444'};
+            p.functionHandles.selectionCodes.right = {'344'}; 
 
-            p.functionHandles.selectionCodes.left = {'441'};
-            p.functionHandles.selectionCodes.center = {'440','442','444'};
-            p.functionHandles.selectionCodes.right = {'443'};
+%             p.functionHandles.selectionCodes.left = {'414'};
+%             p.functionHandles.selectionCodes.center = {'404','424','444'};
+%             p.functionHandles.selectionCodes.right = {'434'};      
+% 
+%             p.functionHandles.selectionCodes.left = {'441'};
+%             p.functionHandles.selectionCodes.center = {'440','442','444'};
+%             p.functionHandles.selectionCodes.right = {'443'};
     end
+    
+    
+    p.functionHandles.setObj = dmf.set('colors',colors,'patterns',patterns,'shapes',shapes);
+    
 else
     
     %  State dependent steps
@@ -99,21 +123,66 @@ else
             %  Here you could adjust windows, etc.
             switch lower(p.trial.session.subject)
                 case 'murray'
+                    p.functionHandles.graphicsManagerObj.trainingMode = false;
+                    p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
+                    
+                    p.functionHandles.stateTiming.hold = 0.5;
+                    p.functionHandles.stateTiming.proposition = 0.;
+                    p.functionHandles.stateTiming.postPropositionDelay = 0.;
+                    p.functionHandles.stateTiming.argument = 0.;
+                    p.functionHandles.stateTiming.postArgumentDelay = 0.;
+                    p.functionHandles.stateTiming.response = 10;
+                    p.functionHandles.stateTiming.reward = 1;
+                    p.functionHandles.stateTiming.error = 1;
+                    p.functionHandles.stateTiming.penalty = 2;
+                                        
+                    p.functionHandles.graphicsManagerObj.stateConfig.proposition = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.postPropositionDelay = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.argument = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.postArgumentDelay = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.response = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.return = [1 1 1];
                 case 'meatball'
                     p.functionHandles.graphicsManagerObj.trainingMode = false;
                     p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
+                    
                     p.functionHandles.stateTiming.hold = 0.5;
-                    p.functionHandles.stateTiming.proposition = 0;
-                    p.functionHandles.graphicsManagerObj.configuration.response = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.configuration.return = [1 1 1];
+                    p.functionHandles.stateTiming.proposition = 0.2;
+                    p.functionHandles.stateTiming.postPropositionDelay = 0.2;
+                    p.functionHandles.stateTiming.argument = 0.2;
+                    p.functionHandles.stateTiming.postArgumentDelay = 0.2;
+                    p.functionHandles.stateTiming.response = 10;
+                    p.functionHandles.stateTiming.reward = 1;
+                    p.functionHandles.stateTiming.error = 1;
+                    p.functionHandles.stateTiming.penalty = 2;
+                                        
+                    p.functionHandles.graphicsManagerObj.stateConfig.proposition = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.postPropositionDelay = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.argument = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.postArgumentDelay = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.response = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.return = [1 1 1];
                 case 'splinter'
                 case 'debug'
                     p.functionHandles.graphicsManagerObj.trainingMode = false;
                     p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
-                    p.functionHandles.stateTiming.hold = 0.1;
-                    p.functionHandles.stateTiming.proposition = 0;
-                    p.functionHandles.graphicsManagerObj.configuration.response = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.configuration.return = [1 1 1];
+                    
+                    p.functionHandles.stateTiming.hold = 0.5;
+                    p.functionHandles.stateTiming.proposition = 0.1;
+                    p.functionHandles.stateTiming.postPropositionDelay = 0;
+                    p.functionHandles.stateTiming.argument = 0;
+                    p.functionHandles.stateTiming.postArgumentDelay = 0;
+                    p.functionHandles.stateTiming.response = 10;
+                    p.functionHandles.stateTiming.reward = 0.7;
+                    p.functionHandles.stateTiming.error = 0.7;
+                    p.functionHandles.stateTiming.penalty = 2;
+                                        
+                    p.functionHandles.graphicsManagerObj.stateConfig.proposition = [1 0 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.postPropositionDelay = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.argument = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.postArgumentDelay = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.response = [1 1 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.return = [1 1 1];
             end
             
         case p.trial.pldaps.trialStates.trialSetup
@@ -125,7 +194,7 @@ else
                 case 'murray'
                     %  Careful!  Murray seems to boycott if the reward rate
                     %  is too low.
-                    p.functionHandles.reward = 0.475;
+                    p.functionHandles.reward = 0.5;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'meatball'
                     p.functionHandles.reward = 0.45;

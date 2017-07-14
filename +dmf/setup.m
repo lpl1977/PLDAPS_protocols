@@ -35,8 +35,7 @@ p.functionHandles.geometry.symbolCenters = [...
 
 %  Symbol features
 p.functionHandles.features.symbolRadius = p.functionHandles.geometry.symbolRadius;
-p.functionHandles.features.nSpatialCycles = 16;
-p.functionHandles.features.nThetaCycles = 8;
+p.functionHandles.features.nSpatialCycles = 8;
 
 %  Background color
 p.functionHandles.colors.background = p.trial.display.bgColor;
@@ -60,11 +59,6 @@ p.functionHandles.colors.cursor.return = [0 0 0];
 p.functionHandles.colors.cursor.penalty = [0 0 0];
 p.functionHandles.colors.cursor.reward = [0 0 0];
 p.functionHandles.colors.cursor.error = [0 0 0];
-
-%  Pedestal color
-p.functionHandles.colors.pedestal = [0.4 0.4 0.4];
-p.functionHandles.features.pedestalRadius = p.functionHandles.features.symbolRadius + 20;
-
 
 %  Timing
 p.functionHandles.timing.responseDuration = 10;
@@ -96,14 +90,14 @@ dmf.adjustableParameters(p);
 
 %  Possibilities currently defined:
 %  colors:  {'blue','orange','yellow','purple','green','cyan','scarlet'}
-%  patterns:  {'dots','spiral','horizontalLines','verticalLines','waffle','concentricCircles','solid'}
+%  patterns:  {'solid','hollow','horizontalLines','verticalLines'}
 %  shapes:  {'circle','square','diamond','triangle','pentagon','hexagon'}
+% 
+% colors = {'blue','scarlet','yellow'};
+% patterns = {'solid'};
+% shapes = {'triangle','diamond','pentagon'};
 
-colors = {'blue','scarlet','yellow'};
-patterns = {'solid'};
-shapes = {'triangle','diamond','pentagon'};
-
-p.functionHandles.setObj = dmf.set('colors',colors,'patterns',patterns,'shapes',shapes);
+%p.functionHandles.setObj = dmf.set('colors',colors,'patterns',patterns,'shapes',shapes);
 
 [selectedSets.left,setSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.left);
 [selectedSets.right,setSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.right);
@@ -155,10 +149,9 @@ p.functionHandles.graphicsManagerObj = dmf.graphicsManager(...
     'symbolCenters',p.functionHandles.geometry.symbolCenters,...
     'colorLibrary',p.trial.display.colors,...
     'windowPtr',p.trial.display.ptr,...
-    'pedestalRadius',p.functionHandles.features.pedestalRadius,...
-    'patternProperties',p.functionHandles.features.nSpatialCycles,...
-    'stateNames',{'proposition','argument','response','return'},...
-    'configuration',{[1 0 1],[0 1 0],[1 0 1],[1 0 1]});
+    'patternProperties',[p.functionHandles.features.nSpatialCycles 2],...
+    'stateNames',{'proposition','postPropositionDelay','argument','postArgumentDelay','response','return'},...
+    'stateConfig',{[1 0 1],[0 0 0],[0 1 0],[0 0 0],[1 0 1],[1 0 1]});
 
 %  Initialize trial management
 p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'numDecks',2);
@@ -168,3 +161,7 @@ p.functionHandles.trialManagerObj.tokenize('selectionCode','matchedFeatures');
 p.functionHandles.performanceTrackingObj = dmf.performanceTracking(...
     'trackedOutcomes',[p.functionHandles.selectionCodes.left p.functionHandles.selectionCodes.center p.functionHandles.selectionCodes.right]);
 p.functionHandles.performanceTrackingObj.tallyTrials(p.functionHandles.trialManagerObj.conditions);
+
+
+%  eyeLinkManager
+p.functionHandles.eyeLinkManagerObj = eyeLinkManager;
