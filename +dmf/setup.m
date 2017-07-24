@@ -35,7 +35,6 @@ p.functionHandles.geometry.symbolCenters = [...
 
 %  Symbol features
 p.functionHandles.features.symbolRadius = p.functionHandles.geometry.symbolRadius;
-p.functionHandles.features.nSpatialCycles = 8;
 
 %  Background color
 p.functionHandles.colors.background = p.trial.display.bgColor;
@@ -44,16 +43,10 @@ p.functionHandles.colors.background = p.trial.display.bgColor;
 p.functionHandles.colors.cursor.start = [0 0 0];
 p.functionHandles.colors.cursor.engage = [0 0.8 0];
 p.functionHandles.colors.cursor.hold = [0.8 0.8 0.8];
-p.functionHandles.colors.cursor.proposition = p.functionHandles.colors.cursor.hold;
-p.functionHandles.colors.cursor.postPropositionDelay = p.functionHandles.colors.cursor.hold;
-p.functionHandles.colors.cursor.argument = p.functionHandles.colors.cursor.hold;
-p.functionHandles.colors.cursor.postArgumentDelay = p.functionHandles.colors.cursor.hold;
-p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
-p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
-p.functionHandles.colors.cursor.presentation = p.functionHandles.colors.cursor.hold;
+p.functionHandles.colors.cursor.symbols = p.functionHandles.colors.cursor.hold;
 p.functionHandles.colors.cursor.delay = p.functionHandles.colors.cursor.hold;
-p.functionHandles.colors.cursor.probe = p.functionHandles.colors.cursor.hold;
 p.functionHandles.colors.cursor.response = [0 0 0];
+p.functionHandles.colors.cursor.commit = [0 0 0];
 p.functionHandles.colors.cursor.warning = [0.8 0 0];
 p.functionHandles.colors.cursor.return = [0 0 0];
 p.functionHandles.colors.cursor.penalty = [0 0 0];
@@ -77,6 +70,7 @@ p.functionHandles.stateTiming.postPropositionDelay = 0.5;
 p.functionHandles.stateTiming.argument = 0.5;
 p.functionHandles.stateTiming.postArgumentDelay = 0.5;
 p.functionHandles.stateTiming.response = 10;
+p.functionHandles.stateTiming.commit = 2*p.trial.display.ifi;
 p.functionHandles.stateTiming.reward = 0.7;
 p.functionHandles.stateTiming.error = 0.7;
 p.functionHandles.stateTiming.penalty = 2;
@@ -149,9 +143,9 @@ p.functionHandles.graphicsManagerObj = dmf.graphicsManager(...
     'symbolCenters',p.functionHandles.geometry.symbolCenters,...
     'colorLibrary',p.trial.display.colors,...
     'windowPtr',p.trial.display.ptr,...
-    'patternProperties',[p.functionHandles.features.nSpatialCycles 2],...
-    'stateNames',{'proposition','postPropositionDelay','argument','postArgumentDelay','response','return'},...
-    'stateConfig',{[1 0 1],[0 0 0],[0 1 0],[0 0 0],[1 0 1],[1 0 1]});
+    'nLines',8,...
+    'borderWidth',2,...
+    'stateConfig',{'symbols01',[1 1 1],'delay01',[1 1 1],'symbols02',[1 1 1],'delay02',[1 1 1],'symbols03',[1 1 1],'delay03',[1 1 1],'response',[1 1 1],'commit',[1 1 1],'return',[1 1 1]});
 
 %  Initialize trial management
 p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'numDecks',2);
@@ -162,6 +156,5 @@ p.functionHandles.performanceTrackingObj = dmf.performanceTracking(...
     'trackedOutcomes',[p.functionHandles.selectionCodes.left p.functionHandles.selectionCodes.center p.functionHandles.selectionCodes.right]);
 p.functionHandles.performanceTrackingObj.tallyTrials(p.functionHandles.trialManagerObj.conditions);
 
-
-%  eyeLinkManager
-p.functionHandles.eyeLinkManagerObj = eyeLinkManager;
+%  Initialize reward maanger
+p.functionHandles.rewardManagerObj = rewardManager('systemName','datapixx','systemParams',{'sampleRate',1000','ttlAmp',5,'channel',3});

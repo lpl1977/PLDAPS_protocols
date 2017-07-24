@@ -127,62 +127,53 @@ else
                     p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
                     
                     p.functionHandles.stateTiming.hold = 0.5;
-                    p.functionHandles.stateTiming.proposition = 0.;
-                    p.functionHandles.stateTiming.postPropositionDelay = 0.;
-                    p.functionHandles.stateTiming.argument = 0.;
-                    p.functionHandles.stateTiming.postArgumentDelay = 0.;
+                    p.functionHandles.stateTiming.symbols01 = 0;
+                    p.functionHandles.stateTiming.symbols02 = 0;
+                    p.functionHandles.stateTiming.symbols03 = 0;
+                    p.functionHandles.stateTiming.delay01 = 0;
+                    p.functionHandles.stateTiming.delay02 = 0;
+                    p.functionHandles.stateTiming.delay03 = 0;
                     p.functionHandles.stateTiming.response = 10;
                     p.functionHandles.stateTiming.reward = 1;
                     p.functionHandles.stateTiming.error = 1;
                     p.functionHandles.stateTiming.penalty = 2;
-                                        
-                    p.functionHandles.graphicsManagerObj.stateConfig.proposition = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.postPropositionDelay = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.argument = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.postArgumentDelay = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.response = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.return = [1 1 1];
+                    
+                    p.functionHandles.graphicsManagerObj.stateConfig.symbols01 = [1 0 1];
+                    p.functionHandles.graphicsManagerObj.stateConfig.delay01 = [1 0 1];
+                    
                 case 'meatball'
                     p.functionHandles.graphicsManagerObj.trainingMode = false;
                     p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
                     
+                    
                     p.functionHandles.stateTiming.hold = 0.5;
-                    p.functionHandles.stateTiming.proposition = 0.2;
-                    p.functionHandles.stateTiming.postPropositionDelay = 0.2;
-                    p.functionHandles.stateTiming.argument = 0.2;
-                    p.functionHandles.stateTiming.postArgumentDelay = 0.2;
+                    p.functionHandles.stateTiming.symbols01 = 0;
+                    p.functionHandles.stateTiming.symbols02 = 0;
+                    p.functionHandles.stateTiming.symbols03 = 0;
+                    p.functionHandles.stateTiming.delay01 = 0;
+                    p.functionHandles.stateTiming.delay02 = 0;
+                    p.functionHandles.stateTiming.delay03 = 0;
                     p.functionHandles.stateTiming.response = 10;
                     p.functionHandles.stateTiming.reward = 1;
                     p.functionHandles.stateTiming.error = 1;
                     p.functionHandles.stateTiming.penalty = 2;
-                                        
-                    p.functionHandles.graphicsManagerObj.stateConfig.proposition = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.postPropositionDelay = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.argument = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.postArgumentDelay = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.response = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.return = [1 1 1];
+                    
                 case 'splinter'
                 case 'debug'
                     p.functionHandles.graphicsManagerObj.trainingMode = false;
                     p.functionHandles.graphicsManagerObj.trainingAlpha = 1;
                     
                     p.functionHandles.stateTiming.hold = 0.5;
-                    p.functionHandles.stateTiming.proposition = 0.1;
-                    p.functionHandles.stateTiming.postPropositionDelay = 0;
-                    p.functionHandles.stateTiming.argument = 0;
-                    p.functionHandles.stateTiming.postArgumentDelay = 0;
+                    p.functionHandles.stateTiming.symbols01 = 0;
+                    p.functionHandles.stateTiming.symbols02 = 0;
+                    p.functionHandles.stateTiming.symbols03 = 0;
+                    p.functionHandles.stateTiming.delay01 = 0;
+                    p.functionHandles.stateTiming.delay02 = 0;
+                    p.functionHandles.stateTiming.delay03 = 0;
                     p.functionHandles.stateTiming.response = 10;
-                    p.functionHandles.stateTiming.reward = 0.7;
-                    p.functionHandles.stateTiming.error = 0.7;
-                    p.functionHandles.stateTiming.penalty = 2;
-                                        
-                    p.functionHandles.graphicsManagerObj.stateConfig.proposition = [1 0 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.postPropositionDelay = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.argument = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.postArgumentDelay = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.response = [1 1 1];
-                    p.functionHandles.graphicsManagerObj.stateConfig.return = [1 1 1];
+                    p.functionHandles.stateTiming.reward = 1;
+                    p.functionHandles.stateTiming.error = 1;
+                    p.functionHandles.stateTiming.penalty = 2;                    
             end
             
         case p.trial.pldaps.trialStates.trialSetup
@@ -197,7 +188,7 @@ else
                     p.functionHandles.reward = 0.5;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'meatball'
-                    p.functionHandles.reward = 0.45;
+                    p.functionHandles.reward = 0.5;
                     p.functionHandles.timing.holdDelay = min(3,0.5 + exprnd(0.5));
                 case 'splinter'
                     p.functionHandles.reward = 1.0;

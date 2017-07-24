@@ -7,13 +7,22 @@ function p = trialFunction(p,state)
 %  Why does it sometimes go over 540?
 %  How do I do blocks?
 %  How can I more flexibly set the number of trials?
-%  Reward manager that will remove need to specify arduino or not
 
 switch state
     
     case p.trial.pldaps.trialStates.experimentPostOpenScreen
         %  experimentPostOpenScreen--executed once after screen has been
-        %  opened.
+        %  opened.        
+        
+        %  eyeLinkManager
+        p.functionHandles.eyeLinkManagerObj = eyeLinkManager(...
+            'eyeLinkControlStructure',p.trial.eyelink.setup,...
+            'ifi',p.trial.display.ifi,...
+            'windowPtr',p.trial.display.ptr,...
+            'bgColor',p.trial.display.bgColor,...
+            'dotWidth',80,'dotColor',[1 0 0],'dotPulseWidth',0.25,'dotPeriod',0.5,...
+            'rewardFunction',p.functionHandles.rewardManagerObj.giveFunc,...
+            'displayFunction','flickeringDot');
         
         %  By now the analog stick object should have been created, so
         %  let's adjust for screen geometry
@@ -24,12 +33,26 @@ switch state
         %  later.  Width of the center window is the symbol diameter.
         horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
         centerWindow = 2*p.functionHandles.geometry.symbolRadius / horizontalSpan; %analogStickObj.pWidth;
-        p.functionHandles.analogStickWindowManager.addWindow('neutral',[-0.5*centerWindow -0.5 0.5*centerWindow 0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('engaged',[-0.5*centerWindow -1 0.5*centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('center',[-0.5*centerWindow -1 0.5*centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('left',[-1 -1 -0.5*centerWindow -0.5]);
-        p.functionHandles.analogStickWindowManager.addWindow('right',[0.5*centerWindow -1 1 -0.5]);
+        p.functionHandles.analogStickWindowManagerObj.addWindow('neutral',centerWindow*[-0.5 -0.5 0.5 0.5]);
+        p.functionHandles.analogStickWindowManagerObj.addWindow('engaged',[-1 -1 1 -0.95]);
+        p.functionHandles.analogStickWindowManagerObj.addWindow('center',[-0.5*centerWindow -1 0.5*centerWindow 1]);
+        p.functionHandles.analogStickWindowManagerObj.addWindow('left',[-1 -1 -0.5*centerWindow 1]);
+        p.functionHandles.analogStickWindowManagerObj.addWindow('right',[0.5*centerWindow -1 1 1]);        
         
+        %  Set features for the analog stick data display
+        p.functionHandles.analogStickDisplayObj = analogStickDisplay(...
+            'overlayPtr',p.trial.display.overlayptr,...
+            'displaySize',300,...
+            'displayLocation',[200 800],...
+            'historyColor',p.trial.display.clut.hWhite,...
+            'currentColor',p.trial.display.clut.hGreen,...
+            'frameColor',p.trial.display.clut.hCyan);
+        p.functionHandles.analogStickDisplayObj.addWindow('neutral',p.functionHandles.analogStickWindowManagerObj.window('neutral'),p.trial.display.clut.hBlue);
+        p.functionHandles.analogStickDisplayObj.addWindow('engaged',p.functionHandles.analogStickWindowManagerObj.window('engaged'),p.trial.display.clut.hBlue);
+        p.functionHandles.analogStickDisplayObj.addWindow('center',p.functionHandles.analogStickWindowManagerObj.window('center'),p.trial.display.clut.hBlue);
+        p.functionHandles.analogStickDisplayObj.addWindow('left',p.functionHandles.analogStickWindowManagerObj.window('left'),p.trial.display.clut.hBlue);
+        p.functionHandles.analogStickDisplayObj.addWindow('right',p.functionHandles.analogStickWindowManagerObj.window('right'),p.trial.display.clut.hBlue);  
+
         %  Make last final custom adjustments based on subject.
         dmf.adjustableParameters(p,state);
         
@@ -39,21 +62,12 @@ switch state
         fprintf(1,'Created %d symbol textures\n',length(p.functionHandles.graphicsManagerObj.symbolTextures));
         fprintf(1,'****************************************************************\n');
         
-        %  Display messages        
+        %  Display messages
         
         fprintf(1,'****************************************************************\n');
         fprintf('Windows for analog stick:\n');
-        p.functionHandles.analogStickWindowManager.displayWindows;
-        fprintf(1,'****************************************************************\n');
-        
-        %  If this is the mini-rig then prepare to use the rewardManager
-        if(isField(p.trial,'a2duino') && p.trial.a2duino.useForReward)
-            fprintf(1,'****************************************************************\n');
-            fprintf(1,'Using the a2duino DAQ for reward.\n');
-            fprintf(1,'Reward type: %s.\n',p.trial.a2duino.rewardType);
-            fprintf(1,'****************************************************************\n');
-        end        
-        
+        p.functionHandles.analogStickWindowManagerObj.displayWindows;
+        fprintf(1,'****************************************************************\n');        
         
     case p.trial.pldaps.trialStates.trialSetup
         %  trialSetup--this is where we would perform any steps that needed
@@ -75,6 +89,9 @@ switch state
         
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
+        
+        %  Reset the display for the analog stick
+        p.functionHandles.analogStickDisplayObj.clearRecord;
         
         %  Set any adjustable parameters
         dmf.adjustableParameters(p,state);
@@ -107,7 +124,7 @@ switch state
     case p.trial.pldaps.trialStates.trialCleanUpandSave
         %  cleanUpandSave--post trial management; perform any steps that
         %  should happen upon completion of a trial such as performance
-        %  tracking and trial index updating.        
+        %  tracking and trial index updating.
         
         %  Capture data for this trial
         p.trial.trialRecord.stateTransitionLog = p.functionHandles.stateVariables.transitionLog;
@@ -165,17 +182,6 @@ switch state
             fprintf('\n');
         end
         
-        %  Check if we have hit a termination condition
-        if(isfield(p.trial,'a2duino') && p.trial.a2duino.useForReward)
-            switch p.trial.a2duino.rewardType
-                case 'pellet'
-                    if(~p.functionHandles.a2duinoObj.rewardInProgress && ~p.functionHandles.a2duinoObj.rewardCompleted)
-                        fprintf('We are out of pellets; terminating session.\n');
-                        p.trial.pldaps.quit = 2;
-                    end
-            end
-        end
-        
         %%%%%%%%%%%%%%%%%%
         %  FRAME STATES  %
         %%%%%%%%%%%%%%%%%%
@@ -194,9 +200,12 @@ switch state
         %  Draw in the cursor
         horizontalSpan = 2*(p.functionHandles.geometry.symbolDisplacement + p.functionHandles.geometry.symbolRadius);
         screenPosition = p.functionHandles.analogStickObj.screenPosition;
-        screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*horizontalSpan),p.functionHandles.geometry.center(1)-0.5*horizontalSpan);        
+        screenPosition(1) = max(min(screenPosition(1),p.functionHandles.geometry.center(1)+0.5*horizontalSpan),p.functionHandles.geometry.center(1)-0.5*horizontalSpan);
         p.functionHandles.analogStickCursorObj.drawCursor(screenPosition,...
-            'fillColor',p.functionHandles.colors.cursor.(p.functionHandles.stateVariables.nextState));
+            'fillColor',p.functionHandles.colors.cursor.(cell2mat(regexp(p.functionHandles.stateVariables.nextState,'[a-z,A-Z]+','match'))));
+        
+        %  Update the analog stick display
+        p.functionHandles.analogStickDisplayObj.updateDisplay(p.functionHandles.analogStickObj.normalizedPosition);
         
         %  *******
         %  once you start putting a fixation spot in, you'll want to draw
@@ -235,7 +244,7 @@ switch state
         end
         
         %  Control trial progress with trial state variables
-        switch p.functionHandles.stateVariables.nextState
+        switch cell2mat(regexp(p.functionHandles.stateVariables.nextState,'[a-z,A-Z]+','match'))
             
             case 'start'
                 
@@ -246,9 +255,9 @@ switch state
                 %  can proceed to the next state.  Otherwise, go to
                 %  warning.
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                    fprintf('Entered state <strong>%s</strong>\n',p.functionHandles.stateVariables.currentState);
                 else
-                    if(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
+                    if(p.functionHandles.analogStickWindowManagerObj.inWindow('neutral'))
                         fprintf('\tAnalog stick in neutral position.\n');
                         p.functionHandles.stateVariables.nextState = 'engage';
                     else
@@ -266,11 +275,12 @@ switch state
                 %  to start once he has returned the joystick to the
                 %  neutral position.
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                    fprintf('Entered state <strong>%s</strong>\n',p.functionHandles.stateVariables.currentState);
+                    fprintf('\tMonkey to return analog stick to neutral position.\n');
                     pds.audio.play(p,'warning',Inf);
                     p.functionHandles.analogStickCursorObj.visible = true;
-                elseif(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
-                    fprintf('\tAnalog stick returned to neutral position.\n');
+                elseif(p.functionHandles.analogStickWindowManagerObj.inWindow('neutral'))
+                    fprintf('\tMonkey returned analog stick to neutral position after %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     pds.audio.stop(p,'warning');
                     p.functionHandles.analogStickCursorObj.visible = false;
                     p.functionHandles.stateVariables.nextState = 'start';
@@ -282,13 +292,15 @@ switch state
                 %
                 %  We enter this state once the analog stick is in the
                 %  neutral position during the start state.  Go to hold
-                %  once he engages the joystick.
+                %  once he engages the joystick in the center position.
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                    fprintf('Entered state <strong>%s</strong>\n',p.functionHandles.stateVariables.currentState);
+                    fprintf('\tMonkey to move analog stick to engaged position.\n');
                     p.functionHandles.analogStickCursorObj.visible = true;
-                elseif(p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                    fprintf('\tAnalog stick engaged after %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                elseif(p.functionHandles.analogStickWindowManagerObj.inWindow('engaged') && p.functionHandles.analogStickWindowManagerObj.inWindow('center'))
+                    fprintf('\tMonkey engaged analog stick after %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'hold';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
                 end
                 
             case 'hold'
@@ -298,40 +310,47 @@ switch state
                 %  We enter this state once the analog stick is engaged and
                 %  before we are ready to show the symbols.  He will wait
                 %  the hold duration before the symbol presentation begins
-                %  and in that time should establish fixation.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.hold))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
-                    fprintf('\tMonkey will be required to hold the analog stick for %5.3f sec.\n',p.functionHandles.stateVariables.timeRemainingInState);
+                %  and in that time should establish fixation.  Also, we
+                %  won't go to symbol presentation until he also has the
+                %  analog stick in both the engaged and center windows.
+                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                    fprintf('Entered state <strong>%s</strong> for %5.3f sec.\n',...
+                        p.functionHandles.stateVariables.currentState,...
+                        p.functionHandles.stateTiming.(p.functionHandles.stateVariables.currentState));
+                    fprintf('\tMonkey to hold analog stick in center engaged position for %0.3f sec.\n',p.functionHandles.stateTiming.(p.functionHandles.stateVariables.currentState));
                 else
                     if(p.functionHandles.stateVariables.timeInStateElapsed)
-                        fprintf('\tMonkey kept analog stick engaged for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                        fprintf('\tMonkey held analog stick in center engaged position for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                         
                         %  I will need put a check for fixation here
-                        p.functionHandles.stateVariables.nextState = 'proposition';
-                    elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                        fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                        p.functionHandles.stateVariables.nextState = 'symbols01';
+                        p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
+                    elseif(~p.functionHandles.analogStickWindowManagerObj.inWindow('engaged') || ~p.functionHandles.analogStickWindowManagerObj.inWindow('center'))
+                        fprintf('\tMonkey moved analog stick prematurely out of center engaged position at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                         p.functionHandles.stateVariables.nextState = 'warning';
                     end
                 end
                 
-            case 'proposition'
+            case 'symbols'
                 
-                %  STATE:  proposition
+                %  STATE:  symbols
                 %
-                %  Show the symbols for proposition.  Advance to delay once
-                %  he fixates the center symbol position.  He must keep
-                %  joystick engaged the entire time.  During this state he
-                %  may move his eyes as much as he likes to examine the
-                %  stimulus, but he may not move the joystick out of
-                %  position.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.proposition))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                %  We enter this state for the first time from hold.
+                %  Subsequent entry is from the delay phases.  showSymbol
+                %  states are numbered.
+                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                    fprintf('Entered state <strong>%s</strong> for %5.3f sec.\n',...
+                        p.functionHandles.stateVariables.currentState,...                        
+                        p.functionHandles.stateTiming.(p.functionHandles.stateVariables.currentState));
+                    fprintf('\tMonkey to hold analog stick in engaged position.\n');
                 else
-                    if(p.functionHandles.analogStickWindowManager.inWindow('engaged'))
+                    if(p.functionHandles.analogStickWindowManagerObj.inWindow('engaged'))
                         if(p.functionHandles.stateVariables.timeInStateElapsed)
+                            fprintf('\tMonkey held analog stick in engaged position for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                             
                             %  I will need to put a check for fixation here
-                            p.functionHandles.stateVariables.nextState = 'postPropositionDelay';
+                            symbolPhase = str2double(cell2mat(regexp(p.functionHandles.stateVariables.currentState,'[0-9]+','match')));
+                            p.functionHandles.stateVariables.nextState = sprintf('delay%02d',symbolPhase);
                         end
                     else
                         fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
@@ -341,29 +360,36 @@ switch state
                             'abortTime',GetSecs);
                         p.functionHandles.analogStickCursorObj.visible = false;
                         p.functionHandles.stateVariables.nextState = 'penalty';
-                        p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                     end
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
                 end
                 
-            case 'postPropositionDelay'
+            case 'delay'
                 
-                %  STATE:  postPropositionDelay
+                %  STATE:  delay
                 %
-                %  This is a delay between the proposition and the
-                %  argument.  He must maintain fixation and hold the
-                %  joystick in window for duration of delay period.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.postPropositionDelay))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                %  This is a delay between symbol presentations.  delay
+                %  states are numbered with a user state variable.
+                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                    fprintf('Entered state <strong>%s</strong> for %5.3f sec.\n',...
+                        p.functionHandles.stateVariables.currentState,...
+                        p.functionHandles.stateTiming.(p.functionHandles.stateVariables.currentState));
+                    fprintf('\tMonkey to hold the analog stick in engaged position.\n');
                 else
-                    if(p.functionHandles.stateVariables.timeInStateElapsed)
-                        
-                        %  I will need to put a check for fixation here
-                        p.functionHandles.stateVariables.nextState = 'argument';
-                    elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                        
-                        %  Monkey has moved the analog stick prematurely.
-                        %  Since he has seen the symbols presented, this is a
-                        %  trial abort.
+                    if(p.functionHandles.analogStickWindowManagerObj.inWindow('engaged'))
+                        if(p.functionHandles.stateVariables.timeInStateElapsed)
+                            fprintf('\tMonkey kept analog stick in engaged position for %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
+                            
+                            %  I will need to put a check for fixation here
+                            delayPhase = str2double(cell2mat(regexp(p.functionHandles.stateVariables.currentState,'[0-9]+','match')));
+                            if(delayPhase<3)
+                                p.functionHandles.stateVariables.nextState = sprintf('symbols%02d',delayPhase+1);
+                            else
+                                p.functionHandles.stateVariables.nextState = 'response';
+                            end
+
+                        end
+                    else
                         fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
                         p.functionHandles.trialOutcomeObj.recordAbort(...
                             'abortState',p.functionHandles.stateVariables.currentState,...
@@ -371,182 +397,113 @@ switch state
                             'abortTime',GetSecs);
                         p.functionHandles.analogStickCursorObj.visible = false;
                         p.functionHandles.stateVariables.nextState = 'penalty';
-                        p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                        %                 elseif(false)
-                        %
-                        %                     %  Monkey broke fixation prematurely. Since he has seen
-                        %                     %  the symbols presented, this is a trial abort.
-                        %                     fprintf('\tMonkey broke fixation prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                        %                     p.functionHandles.trialOutcomeObj.recordAbort(...
-                        %                         'abortState',p.functionHandles.stateVariables.currentState,...
-                        %                         'abortMessage','prematureFixationBreak',...
-                        %                         'abortTime',GetSecs);
-                        %                     p.functionHandles.analogStickCursorObj.visible = false;
-                        %                     p.functionHandles.stateVariables.nextState = 'penalty';
-                        %                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
                     end
-                end
-                
-            case 'argument'
-                
-                %  STATE:  argument
-                %
-                %  Presentation of the argument symbol.  He must maintain
-                %  fixation and hold the joystick in window for a brief
-                %  delay.  Afterwards he can move the joystick and gaze to
-                %  his little heart's content.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.argument))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
-                else
-                    if(p.functionHandles.stateVariables.timeInStateElapsed)
-                        p.functionHandles.stateVariables.nextState = 'postArgumentDelay';
-                    elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                        
-                        %  Monkey has moved the analog stick prematurely.
-                        %  Since he has seen the symbols presented, this is a
-                        %  trial abort.
-                        fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                        p.functionHandles.trialOutcomeObj.recordAbort(...
-                            'abortState',p.functionHandles.stateVariables.currentState,...
-                            'abortMessage','prematureAnalogStickMovement',...
-                            'abortTime',GetSecs);
-                        p.functionHandles.analogStickCursorObj.visible = false;
-                        p.functionHandles.stateVariables.nextState = 'penalty';
-                        p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                        %                 elseif(false)
-                        %
-                        %                     %  Monkey broke fixation prematurely. Since he has seen
-                        %                     %  the symbols presented, this is a trial abort.
-                        %                     fprintf('\tMonkey broke fixation prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                        %                     p.functionHandles.trialOutcomeObj.recordAbort(...
-                        %                         'abortState',p.functionHandles.stateVariables.currentState,...
-                        %                         'abortMessage','prematureFixationBreak',...
-                        %                         'abortTime',GetSecs);
-                        %                     p.functionHandles.analogStickCursorObj.visible = false;
-                        %                     p.functionHandles.stateVariables.nextState = 'penalty';
-                        %                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                    end
-                end
-                
-            case 'postArgumentDelay'
-                
-                %  STATE:  postArgumentDelay
-                %
-                %  This is a delay between the argument and the
-                %  resolution.  He must maintain fixation and hold the
-                %  joystick in window for duration of delay period.
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.postArgumentDelay))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
-                else
-                    if(p.functionHandles.stateVariables.timeInStateElapsed)
-                        p.functionHandles.stateVariables.nextState = 'response';
-                    elseif(~p.functionHandles.analogStickWindowManager.inWindow('engaged'))
-                        
-                        %  Monkey has moved the analog stick prematurely.
-                        %  Since he has seen the symbols presented, this is a
-                        %  trial abort.
-                        fprintf('\tMonkey moved analog stick prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                        p.functionHandles.trialOutcomeObj.recordAbort(...
-                            'abortState',p.functionHandles.stateVariables.currentState,...
-                            'abortMessage','prematureAnalogStickMovement',...
-                            'abortTime',GetSecs);
-                        p.functionHandles.analogStickCursorObj.visible = false;
-                        p.functionHandles.stateVariables.nextState = 'penalty';
-                        p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.penalty;
-                        %                 elseif(false)
-                        %
-                        %                     %  Monkey broke fixation prematurely. Since he has seen
-                        %                     %  the symbols presented, this is a trial abort.
-                        %                     fprintf('\tMonkey broke fixation prematurely at %0.3f sec.\n',p.functionHandles.stateVariables.timeInState);
-                        %                     p.functionHandles.trialOutcomeObj.recordAbort(...
-                        %                         'abortState',p.functionHandles.stateVariables.currentState,...
-                        %                         'abortMessage','prematureFixationBreak',...
-                        %                         'abortTime',GetSecs);
-                        %                     p.functionHandles.analogStickCursorObj.visible = false;
-                        %                     p.functionHandles.stateVariables.nextState = 'penalty';
-                        %                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                    end
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
                 end
                 
             case 'response'
                 
                 %  STATE:  response
                 %
-                %  Present the symbols from the proposition and monkey can
-                %  make his selection.  Enter this state with the cursor in
-                %  the engaged state. He may either release the joystick or
-                %  move the joystick left or right.  His default response
-                %  is center.  He chooses center by allowing the joystick
-                %  to return to neutral without first choosing left or
-                %  right.
+                %  Monkey may either release the joystick or move the
+                %  joystick left or right.  If he simply releases the
+                %  joystick, his response will be recorded as center.  In
+                %  order to respond left or right, monkey should hold
+                %  joystick position briefly in that window prior to
+                %  release from the engaged position.
                 
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.response))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
-                    fprintf('\tMonkey will have %5.3f sec to make his response.\n',p.functionHandles.stateVariables.timeRemainingInState);
-                else
+                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                    fprintf('Entered <strong>%s</strong> state\n',p.functionHandles.stateVariables.currentState);
+                    fprintf('\tMonkey will have %5.3f sec to make his response.\n',...
+                        p.functionHandles.stateTiming.(p.functionHandles.stateVariables.currentState));
+                elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     
-                    %  Proceed through time and position checks
-                    if(p.functionHandles.stateVariables.timeInStateElapsed)
-                        
-                        %  He has elapsed the maximum time allotted for his
-                        %  response.  This is a trial abort.
-                        p.functionHandles.trialOutcomeObj.recordAbort(...
-                            'abortState',p.functionHandles.stateVariables.currentState,...
-                            'abortMessage','responseDurationElapsed',...
-                            'abortTime',GetSecs);
-                        p.functionHandles.analogStickCursorObj.visible = false;
-                        p.functionHandles.stateVariables.nextState = 'penalty';
-                        p.functionHandles.stateVariables.stateDuration = p.functionHandles.timing.penaltyDuration;
-                        
-                    elseif(p.functionHandles.analogStickWindowManager.inWindow('left'))
-                        
-                        %  Monkey has chosen left.  Record it and go on.
+                    %  Monkey has elapsed the maximum time allotted for his
+                    %  response.  This is a trial abort.
+                    p.functionHandles.trialOutcomeObj.recordAbort(...
+                        'abortState',p.functionHandles.stateVariables.currentState,...
+                        'abortMessage','responseDurationElapsed',...
+                        'abortTime',GetSecs);
+                    p.functionHandles.analogStickCursorObj.visible = false;
+                    p.functionHandles.stateVariables.nextState = 'penalty';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;                        
+                elseif(~p.functionHandles.analogStickWindowManagerObj.inWindow('engaged'))
+                    
+                    %  Monkey has moved cursor out of engaged position;
+                    %  since we are reaching this condition in this state,
+                    %  he didn't first move to left or right so we consider
+                    %  his response to be center. 
+                    
+                    p.functionHandles.trialOutcomeObj.recordResponse(...
+                        'response','center',...
+                        'responseTime',GetSecs);
+                    p.functionHandles.stateVariables.nextState = 'return';
+                elseif(~p.functionHandles.analogStickWindowManagerObj.inWindow('center'))
+                    
+                    %  Monkey has moved cursor out of center position but
+                    %  still has cursor in engaged position.  Time for him
+                    %  to commit to his response.
+                    if(p.functionHandles.analogStickWindowManagerObj.inWindow('left'))
                         p.functionHandles.trialOutcomeObj.recordResponse(...
                             'response','left',...
                             'responseTime',GetSecs);
-                        p.functionHandles.stateVariables.nextState = 'return';
-                    elseif(p.functionHandles.analogStickWindowManager.inWindow('right'))
-                        
-                        %  Monkey has chosen right.  Record it and go on.
+                    else
                         p.functionHandles.trialOutcomeObj.recordResponse(...
                             'response','right',...
                             'responseTime',GetSecs);
-                        p.functionHandles.stateVariables.nextState = 'return';
-                    elseif(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
-                        
-                        %  Monkey has released the analog stick and it has
-                        %  returned to the neutral position.  His response is
-                        %  center because he never reached left or right
-                        %  windows.
-                        p.functionHandles.trialOutcomeObj.recordResponse(...
-                            'response','center',...
-                            'responseTime',GetSecs);
-                        p.functionHandles.stateVariables.nextState = 'return';
                     end
+                    p.functionHandles.stateVariables.nextState = 'commit';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;                    
+                end
+                
+            case 'commit'
+                
+                %  STATE:  commit
+                %
+                %  Monkey has moved the cursor to either the left or the
+                %  right.  He must remain engaged for the minimum time in
+                %  order to commit his response.  If he moves back to
+                %  center before then he will go back to response.
+                %  Otherwise he goes to return.
+                
+                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                    fprintf('Entered <strong>%s</strong> state; monkey must hold cursor in "%s" window for %0.03f sec.\n',...
+                        p.functionHandles.stateVariables.currentState,...
+                        p.functionHandles.trialOutcomeObj.response,...
+                        p.functionHandles.stateTiming.(p.functionHandles.stateVariables.currentState));
+                elseif(p.functionHandles.stateVariables.timeInStateElapsed && ~p.functionHandles.analogStickWindowManagerObj.inWindow('engaged'))
+                    fprintf('\tMonkey held analog stick sufficiently long to commit and no longer has it engaged.\n');                    
+                    p.functionHandles.stateVariables.nextState = 'return';
+                elseif(~p.functionHandles.analogStickWindowManagerObj.inWindow('engaged'))
+                    fprintf('\tMonkey no longer has analog stick engaged but did not commit to a response.\n');
+                            p.functionHandles.trialOutcomeObj.recordAbort(...
+                                'abortState',p.functionHandles.stateVariables.currentState,...
+                                'abortMessage','prematureResponse',...
+                                'abortTime',GetSecs);
+                            p.functionHandles.analogStickCursorObj.visible = false;
+                            p.functionHandles.stateVariables.nextState = 'penalty';
+                            p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
+                elseif(~p.functionHandles.analogStickWindowManagerObj.inWindow(p.functionHandles.trialOutcomeObj.response))
+                    fprintf('\tMonkey is changing his response.\n');
+                    p.functionHandles.stateVariables.nextState = 'response';
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
                 end
                 
             case 'return'
                 
                 %  STATE:  return
                 %
-                %  Monkey has either made a choice or allowed the analog
-                %  stick to return to the neutral position.  He can no
+                %  Monkey has either made a choice.  He can no
                 %  longer alter his choice and must return the analog stick
                 %  to the neutral position before he can get his reward.
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
-                end
-                
-                %  Turn the cursor off as soon as it's left the response
-                %  window
-                if(~p.functionHandles.analogStickWindowManager.inWindow(p.functionHandles.trialOutcomeObj.response))
+                    fprintf('Entered <strong>%s</strong> state\n',p.functionHandles.stateVariables.currentState);
+                elseif(p.functionHandles.analogStickWindowManagerObj.inWindow('neutral'))
+                    
+                    %  When analog stick is in neutral position, turn cursor
+                    %  off and proceed to either reward or error.
                     p.functionHandles.analogStickCursorObj.visible = false;
-                end
-                
-                %  When analog stick is in neutral position, extinguish the
-                %  symbols and score his response.
-                if(p.functionHandles.analogStickWindowManager.inWindow('neutral'))
                     fprintf('\tMonkey responded %s\n',p.functionHandles.trialOutcomeObj.response);
                     if(p.functionHandles.trialOutcomeObj.correct)
                         fprintf('\tMonkey''s response was correct.\n');
@@ -555,6 +512,7 @@ switch state
                         fprintf('\tMonkey''s response was incorrect.\n');
                         p.functionHandles.stateVariables.nextState = 'error';
                     end
+                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
                 end
                 
             case 'reward'
@@ -564,34 +522,13 @@ switch state
                 %  Monkey has correctly made his choice.  Give him a reward
                 %  and then advance to the next trial.
                 
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.reward))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                    fprintf('Entered <strong>%s</strong> state\n',p.functionHandles.stateVariables.currentState);
                     pds.audio.play(p,'reward',1);
-                    
-                    %  Provide reward
-                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.useForReward)
-                        switch p.trial.a2duino.rewardType
-                            case 'pellet'
-                                p.functionHandles.a2duinoObj.startPelletRelease;
-                            case 'fluid'
-                                p.functionHandles.a2duinoObj.startFluidReward(p.functionHandles.reward);
-                        end
-                    else
-                        pds.behavior.reward.give(p,p.functionHandles.reward);
-                    end
+                    p.functionHandles.rewardManagerObj.give(p.functionHandles.reward);
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
-                    pds.audio.stop(p,'reward');
-                    
+                    pds.audio.stop(p,'reward');                    
                     p.trial.flagNextTrial = true;
-                    %  Check to make sure the reward is not currently in
-                    %  progress
-                    if(isfield(p.trial,'a2duino') && p.trial.a2duino.useForReward)
-                        if(~p.functionHandles.a2duinoObj.rewardInProgress)
-                            p.trial.flagNextTrial = true;
-                        end
-                    else
-                        p.trial.flagNextTrial = true;
-                    end
                 end
                 
             case 'error'
@@ -601,13 +538,12 @@ switch state
                 %  Monkey has incorrectly made his choice.  Give him an
                 %  error tone and then advance to the penalty phase.
                 
-                if(p.functionHandles.stateVariables.firstEntryIntoState(p.functionHandles.stateTiming.error))
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                if(p.functionHandles.stateVariables.firstEntryIntoState)
+                    fprintf('Entered <strong>%s</strong> state\n',p.functionHandles.stateVariables.currentState);
                     pds.audio.play(p,'incorrect',1);
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     pds.audio.stop(p,'incorrect');
-                    p.functionHandles.stateVariables.nextState = 'penalty';
-                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.penalty;
+                    p.trial.flagNextTrial = true;
                 end
                 
             case 'penalty'
@@ -618,7 +554,7 @@ switch state
                 %  we want to discourage.  He will now get a time penalty.
                 
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
-                    fprintf('Entered %s state\n',upper(p.functionHandles.stateVariables.currentState));
+                    fprintf('Entered <strong>%s</strong> state\n',p.functionHandles.stateVariables.currentState);
                 elseif(p.functionHandles.stateVariables.timeInStateElapsed)
                     p.trial.flagNextTrial = true;
                 end

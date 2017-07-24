@@ -14,7 +14,8 @@ classdef graphicsManager < handle
         symbolRadius
         symbolCenters
         
-        patternProperties
+        nLines
+        borderWidth
         
         rect
         
@@ -41,13 +42,17 @@ classdef graphicsManager < handle
         %
         function obj = graphicsManager(varargin)
             
-            %  Input arguments
-            for i=1:2:nargin
-                obj.(varargin{i}) = varargin{i+1};
+            %  Set properties
+            for i=1:2:nargin-1
+                if(isprop(obj,varargin{i}))
+                    obj.(varargin{i}) = varargin{i+1};
+                else
+                    error('%s is not a valid property of %s',varargin{i},mfilename('class'));
+                end
             end
-            
+                        
             %  Create initial state configuration
-            obj.stateConfig = cell2struct(obj.stateConfig,obj.stateNames,2);
+            obj.stateConfig = cell2struct(obj.stateConfig(2:2:end),obj.stateConfig(1:2:end),2);
         end
         
         %  prepareSymbolTextures
@@ -103,11 +108,11 @@ classdef graphicsManager < handle
                 %  hollow then no need for alpha blending.
                 if(strcmpi(symbolPattern,'hollow'))
                     if(strcmpi(symbolShape,'circle'))
-                        innerRadius = obj.symbolRadius * (1 - 1/obj.patternProperties(1));
+                        innerRadius = obj.symbolRadius * (1 - 1/obj.nLines);
                         patternRect = [2*(obj.symbolRadius - innerRadius) 2*(obj.symbolRadius - innerRadius) 2*innerRadius 2*innerRadius];
                         Screen('FillOval',obj.symbolTextures(i),obj.backgroundColor,patternRect);
                     else
-                        innerRadius = obj.symbolRadius * (1 - 1/(cos(pi/nVertices)*obj.patternProperties(1)));
+                        innerRadius = obj.symbolRadius * (1 - 1/(cos(pi/nVertices)*obj.nLines));
                         Screen('FillPoly',obj.symbolTextures(i),obj.backgroundColor,innerRadius*vertices + repmat([obj.symbolRadius obj.symbolRadius],size(vertices,1),1));
                     end
                 elseif(~strcmpi(symbolPattern,'solid'))
@@ -117,9 +122,9 @@ classdef graphicsManager < handle
                     
                     switch symbolPattern
                         case 'horizontalLines'
-                            mask(:,:,2) = 0.5*(1-cos(pi*obj.patternProperties(1)*y)).*(r<1);
+                            mask(:,:,2) = 0.5*(1-cos(pi*obj.nLines*y)).*(r<1);
                         case 'verticalLines'
-                            mask(:,:,2) = 0.5*(1-cos(pi*obj.patternProperties(1)*x)).*(r<1);
+                            mask(:,:,2) = 0.5*(1-cos(pi*obj.nLines*x)).*(r<1);
                     end
                     mask(mask>0.5) = 1;
                     mask(mask<0.5) = 0;
@@ -132,9 +137,9 @@ classdef graphicsManager < handle
                 
                 %  Add an outline to the symbol
                 if(strcmpi(symbolShape,'circle'))
-                    Screen('FrameOval',obj.symbolTextures(i),symbolColor,obj.rect,obj.patternProperties(2));
+                    Screen('FrameOval',obj.symbolTextures(i),symbolColor,obj.rect,obj.borderWidth);
                 else
-                    Screen('FramePoly',obj.symbolTextures(i),symbolColor,obj.symbolRadius*vertices + repmat([obj.symbolRadius obj.symbolRadius],size(vertices,1),1),obj.patternProperties(2));
+                    Screen('FramePoly',obj.symbolTextures(i),symbolColor,obj.symbolRadius*vertices + repmat([obj.symbolRadius obj.symbolRadius],size(vertices,1),1),obj.borderWidth);
                 end
             end
         end
@@ -171,11 +176,10 @@ classdef graphicsManager < handle
         %  drawStateTexture
         %
         %  Retrieve the texture associated with the specified state and
-        %  draw it into the specified window (usually the display pointer).
-        function drawStateTexture(obj,windowPtr,state)
-            
-            %  Check requested state against list.  If it's not on the
-            %  list, then don't draw anything.
+        %  draw it into the specified window.  If there is not an
+        %  associated state texture, do nothing (this will produce a blank
+        %  screen).
+        function drawStateTexture(obj,windowPtr,state)            
             indx = strcmpi(state,obj.stateNames);
             if(any(indx))
                 Screen('DrawTexture',windowPtr,obj.stateTextures(indx));
@@ -183,5 +187,3 @@ classdef graphicsManager < handle
         end        
     end
 end
-
-
