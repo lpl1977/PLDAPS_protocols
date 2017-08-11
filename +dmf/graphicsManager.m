@@ -33,6 +33,12 @@ classdef graphicsManager < handle
         
         trainingMode = false;
         trainingAlpha = 1;
+        
+        fixationDotColor
+        fixationDotWidth
+        fixationDotVisible = false;
+        
+        backwardsMaskTextures
     end
     
     methods
@@ -53,6 +59,11 @@ classdef graphicsManager < handle
                         
             %  Create initial state configuration
             obj.stateConfig = cell2struct(obj.stateConfig(2:2:end),obj.stateConfig(1:2:end),2);
+            
+            %  Frequently used quantities
+            obj.rect = [0 0 2*obj.symbolRadius 2*obj.symbolRadius];
+            obj.centeredRects = CenterRectOnPoint(obj.rect,obj.symbolCenters(:,1),obj.symbolCenters(:,2))';
+            
         end
         
         %  prepareSymbolTextures
@@ -60,8 +71,6 @@ classdef graphicsManager < handle
             
             %  Prepare frequently used variables
             textureWidth = 2*obj.symbolRadius;
-            obj.rect = [0 0 textureWidth textureWidth];
-            obj.centeredRects = CenterRectOnPoint(obj.rect,obj.symbolCenters(:,1),obj.symbolCenters(:,2))';
             
             %  Generate symbol textures
             nSymbols = size(obj.symbolCodes,1);
@@ -144,6 +153,29 @@ classdef graphicsManager < handle
             end
         end
         
+        %  prepareBackwardsMaskTextures
+        %
+        %  Random color mask (drawn from colorLibrary) same size as a symbol
+        function prepareBackwardsMaskTextures(obj)
+            colorNames = fieldnames(obj.colorLibrary);
+            nColors = length(colorNames);
+            colorLib = zeros(nColors,3);
+            for i=1:nColors
+                colorLib(i,:) = obj.colorLibrary.(colorNames{i});
+            end            
+            textureWidth = 2*obj.symbolRadius;
+            [x,y] = meshgrid(linspace(-1,1,textureWidth),linspace(-1,1,textureWidth));
+            [~,r] = cart2pol(x,y);
+            obj.backwardsMaskTextures = zeros(3,1);
+            apothem = cos(pi/3);
+            for i=1:3
+                backwardsMask = colorLib(unidrnd(nColors,numel(r),1),:);
+                backwardsMask(r(:)>apothem,:) = repmat(obj.backgroundColor,sum(r(:)>apothem),1);
+                backwardsMask = 255*reshape(backwardsMask,textureWidth,textureWidth,3);
+                obj.backwardsMaskTextures(i) = Screen('MakeTexture',obj.windowPtr,backwardsMask);
+            end
+        end
+        
         %  prepareStateTextures
         %
         %  Call during trial preparation to produce textures for each state
@@ -156,7 +188,10 @@ classdef graphicsManager < handle
             if(~isempty(obj.stateTextures))
                 Screen('Close',obj.stateTextures);
             end
-            obj.stateTextures = zeros(length(obj.stateNames),1);
+            obj.stateTextures = zeros(length(obj.stateNames),1);            
+            
+            %  Make some backwards mask textures
+            obj.prepareBackwardsMaskTextures;
             
             %  Iterate over states specified in the configuration
             for i=1:length(obj.stateNames)
@@ -166,10 +201,15 @@ classdef graphicsManager < handle
                 %  configuration and training mode
                 textureAlphas = obj.stateConfig.(obj.stateNames{i});
                 if(obj.trainingMode)
-                    textureAlphas(~strcmp(rewardedResponse,{'left','center','right'})) = obj.trainingAlpha;
+                    ix = ~strcmp(rewardedResponse,{'left','center','right'});
+                    textureAlphas(ix) = obj.trainingAlpha.*textureAlphas(ix);
                 end
-                obj.stateTextures(i) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
+                obj.stateTextures(i) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);                
                 Screen('DrawTextures',obj.stateTextures(i),obj.symbolTextures(selectedSet),[],obj.centeredRects,[],[],textureAlphas);
+                if(any(strcmpi(obj.stateNames{i},{'response','return'})) && any(textureAlphas==0))
+                    ix = textureAlphas==0;
+                    Screen('DrawTextures',obj.stateTextures(i),obj.backwardsMaskTextures(ix),[],obj.centeredRects(:,ix));
+                end
             end
         end
         
@@ -184,6 +224,15 @@ classdef graphicsManager < handle
             if(any(indx))
                 Screen('DrawTexture',windowPtr,obj.stateTextures(indx));
             end
-        end        
+        end
+        
+        %  drawFixationDot
+        function drawFixationDot(obj,windowPtr,pos)
+            if(obj.fixationDotVisible)
+                Screen('DrawDots',windowPtr,...
+                    [pos(1); pos(2)],...
+                    obj.fixationDotWidth,obj.fixationDotColor,[],2);
+            end
+        end
     end
 end

@@ -10,6 +10,7 @@ classdef outcome < handle
         response
         responseTime
         rewardedResponse
+        rewardDuration
         trialAborted = false;
         abortState
         abortTime
@@ -23,6 +24,7 @@ classdef outcome < handle
     properties (Dependent)
         correct
         trialCompleted
+        responseRecorded
     end
     
     methods
@@ -73,12 +75,18 @@ classdef outcome < handle
             outcome = ~(obj.trialAborted || obj.trialInterrupted);
         end                
         
+        %  Get function for responseRecorded
+        function outcome = get.responseRecorded(obj)
+            outcome = ~isempty(obj.response);
+        end
+        
         %  commit
         %
         %  commit the trial outcome to output
         function output = commit(obj)
             output.trialNumber = obj.trialNumber;
             output.rewardedResponse = obj.rewardedResponse;
+            output.rewardDuration = obj.rewardDuration;
             output.correctionLoopTrial = obj.correctionLoopTrial;
             if(obj.trialAborted)
                 output.abortState = obj.abortState;

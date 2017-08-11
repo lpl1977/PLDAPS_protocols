@@ -19,9 +19,9 @@ p.trial.stimulus.cursorW = 8;   % cursor width in pixels (for console display)
 %  Custom colors that I have defined
 LovejoyDefaultColors(p);
 
-%  Trial duration information--he'll have 5 minutes to figure it out per
+%  Trial duration information--he'll have 1 minute to figure it out per
 %  trial
-p.trial.pldaps.maxTrialLength = 5*60;
+p.trial.pldaps.maxTrialLength = 60;
 p.trial.pldaps.maxFrames = p.trial.pldaps.maxTrialLength*p.trial.display.frate;
 
 %  Geometry of stimuli
@@ -52,6 +52,8 @@ p.functionHandles.colors.cursor.return = [0 0 0];
 p.functionHandles.colors.cursor.penalty = [0 0 0];
 p.functionHandles.colors.cursor.reward = [0 0 0];
 p.functionHandles.colors.cursor.error = [0 0 0];
+p.functionHandles.colors.cursor.wait = [0.8 0.8 0.8];
+p.functionHandles.colors.cursor.feedback = p.functionHandles.colors.cursor.wait;
 
 %  Timing
 p.functionHandles.timing.responseDuration = 10;
@@ -63,17 +65,19 @@ p.functionHandles.timing.holdDelay = 0;
 p.functionHandles.timing.presentationDuration = 0;
 p.functionHandles.timing.delayDuration = 0.1;
 p.functionHandles.timing.probeDuration = 0;
-
-p.functionHandles.stateTiming.hold = 0.1;
-p.functionHandles.stateTiming.proposition = 0.5;
-p.functionHandles.stateTiming.postPropositionDelay = 0.5;
-p.functionHandles.stateTiming.argument = 0.5;
-p.functionHandles.stateTiming.postArgumentDelay = 0.5;
-p.functionHandles.stateTiming.response = 10;
-p.functionHandles.stateTiming.commit = 2*p.trial.display.ifi;
-p.functionHandles.stateTiming.reward = 0.7;
-p.functionHandles.stateTiming.error = 0.7;
-p.functionHandles.stateTiming.penalty = 2;
+% 
+% p.functionHandles.stateTiming.hold = 0.1;
+% p.functionHandles.stateTiming.proposition = 0.5;
+% p.functionHandles.stateTiming.postPropositionDelay = 0.5;
+% p.functionHandles.stateTiming.argument = 0.5;
+% p.functionHandles.stateTiming.postArgumentDelay = 0.5;
+% p.functionHandles.stateTiming.response = 10;
+% p.functionHandles.stateTiming.commit = 4*p.trial.display.ifi;
+% p.functionHandles.stateTiming.reward = 0.7;
+% p.functionHandles.stateTiming.error = 0.7;
+% p.functionHandles.stateTiming.penalty = 2;
+% p.functionHandles.stateTiming.feedbackDelay = 0.1;
+% p.functionHandles.stateTiming.feedbackDelivery = 0.7;
 
 %  Set subject dependent parameters
 dmf.adjustableParameters(p);
@@ -86,7 +90,7 @@ dmf.adjustableParameters(p);
 %  colors:  {'blue','orange','yellow','purple','green','cyan','scarlet'}
 %  patterns:  {'solid','hollow','horizontalLines','verticalLines'}
 %  shapes:  {'circle','square','diamond','triangle','pentagon','hexagon'}
-% 
+%
 % colors = {'blue','scarlet','yellow'};
 % patterns = {'solid'};
 % shapes = {'triangle','diamond','pentagon'};
@@ -95,7 +99,7 @@ dmf.adjustableParameters(p);
 
 [selectedSets.left,setSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.left);
 [selectedSets.right,setSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.right);
-[selectedSets.center,setSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.center); 
+[selectedSets.center,setSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.center);
 
 nSetsPerResponse = lcm(lcm(size(selectedSets.left,1),size(selectedSets.right,1)),size(selectedSets.center,1));
 selectedSets.left = repmat(selectedSets.left,nSetsPerResponse/size(selectedSets.left,1),1);
@@ -145,7 +149,9 @@ p.functionHandles.graphicsManagerObj = dmf.graphicsManager(...
     'windowPtr',p.trial.display.ptr,...
     'nLines',8,...
     'borderWidth',2,...
-    'stateConfig',{'symbols01',[1 1 1],'delay01',[1 1 1],'symbols02',[1 1 1],'delay02',[1 1 1],'symbols03',[1 1 1],'delay03',[1 1 1],'response',[1 1 1],'commit',[1 1 1],'return',[1 1 1]});
+    'stateConfig',{'symbols01',[1 1 1],'symbols02',[1 1 1],'symbols03',[1 1 1],'symbols04',[1 1 1],'symbols05',[1 1 1],'symbols06',[1 1 1],'response',[1 1 1]},...
+    'fixationDotColor',[1 0 0],...
+    'fixationDotWidth',20);
 
 %  Initialize trial management
 p.functionHandles.trialManagerObj = trialManager('conditions',c,'maxSequentialErrors',3,'numDecks',2);
@@ -158,3 +164,34 @@ p.functionHandles.performanceTrackingObj.tallyTrials(p.functionHandles.trialMana
 
 %  Initialize reward maanger
 p.functionHandles.rewardManagerObj = rewardManager('systemName','datapixx','systemParams',{'sampleRate',1000','ttlAmp',5,'channel',3});
+
+%  Initialize window manager for analog stick
+p.functionHandles.analogStickWindowManagerObj = windowManager(...
+    'windowPtr',p.trial.display.overlayptr,...
+    'displayAreaSize',[250 250],...
+    'displayAreaCenter',[175 905],...
+    'trajectoryColor',p.trial.display.clut.hWhite,...
+    'maxTrajectorySamples',10/p.trial.display.ifi,...
+    'currentColor',p.trial.display.clut.hGreen,...
+    'borderColor',p.trial.display.clut.hCyan,...
+    'activeWindowColor',p.trial.display.clut.hRed,...
+    'enabledWindowColor',p.trial.display.clut.hBlue,...
+    'disabledWindowColor',p.trial.display.clut.hBlack);
+
+%  Initialize window manager for eye position
+p.functionHandles.eyePositionWindowManagerObj = windowManager(...
+    'windowPtr',p.trial.display.overlayptr,...
+    'displayAreaSize',[p.trial.display.pWidth p.trial.display.pHeight],...
+    'displayAreaCenter',p.trial.display.ctr([1 2]),...
+    'horizontalDisplayRange',[0 p.trial.display.pWidth],...
+    'verticalDisplayRange',[0 p.trial.display.pHeight],...
+    'trajectoryColor',p.trial.display.clut.hYellow,...
+    'maxTrajectorySamples',10/p.trial.display.ifi,...
+    'showTrajectoryTrace',true,...
+    'showDisplayAreaOutline',false,...
+    'showDisplayAreaAxes',false,...
+    'useInvertedVerticalAxis',false,...
+    'currentColor',p.trial.display.clut.hCyan,...
+    'activeWindowColor',p.trial.display.clut.hRed,...
+    'enabledWindowColor',p.trial.display.clut.hBlue,...
+    'disabledWindowColor',p.trial.display.clut.hBlack);
