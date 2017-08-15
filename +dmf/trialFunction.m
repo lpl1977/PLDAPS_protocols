@@ -63,14 +63,15 @@ switch state
             'rewardedResponse',p.trial.condition.rewardedResponse,...
             'correctionLoopTrial',p.functionHandles.trialManagerObj.inCorrectionLoop,...
             'selectionCode',p.trial.condition.selectionCode,...
-            'rewardDuration',p.functionHandles.reward);
+            'rewardDuration',p.functionHandles.reward,...
+            'response','center');
         
         %  Initialize flags for graphical display
         p.functionHandles.analogStickCursorObj.visible = false;
         p.functionHandles.graphicsManagerObj.fixationDotVisible = true;
         
         %  Create textures for display
-        p.functionHandles.graphicsManagerObj.prepareStateTextures(p.trial.condition.selectedSet,p.trial.condition.rewardedResponse);
+        p.functionHandles.graphicsManagerObj.prepareStateTextures(p.trial.condition.selectedSet);
         
         %  Echo trial specs to screen
         fprintf('TRIAL ATTEMPT %d\n',p.trial.pldaps.iTrial);
@@ -96,7 +97,7 @@ switch state
         p.functionHandles.analogStickWindowManagerObj.addWindow(...
             'neutral',symbolWidth*[-1 -1 1 1],true);
         p.functionHandles.analogStickWindowManagerObj.addWindow(...
-            'engage',[-1+2*symbolWidth -1 1-2*symbolWidth -0.95],false);
+            'engage',[-2.5*symbolWidth -1 2.5*symbolWidth -0.95],false);
         p.functionHandles.analogStickWindowManagerObj.addWindow(...
             'left',[-1 -1 -symbolWidth -0.95],false);
         p.functionHandles.analogStickWindowManagerObj.addWindow(...
@@ -201,7 +202,14 @@ switch state
         nextState = cell2mat(regexp(p.functionHandles.stateVariables.nextState,'[a-z,A-Z]+','match'));
         switch nextState
             case 'response'
-                screenPosition = p.functionHandles.analogStickObj.screenPosition;
+                switch p.functionHandles.trialOutcomeObj.response
+                    case 'left'
+                        screenPosition = p.functionHandles.geometry.symbolCenters(1,:);
+                    case 'right'
+                        screenPosition = p.functionHandles.geometry.symbolCenters(3,:);
+                    otherwise
+                        screenPosition = p.functionHandles.geometry.symbolCenters(2,:);
+                end
             otherwise
                 screenPosition = p.trial.display.ctr([1 2]);
         end
@@ -217,9 +225,16 @@ switch state
         %  Update the eye window display
         p.functionHandles.eyePositionWindowManagerObj.updateDisplay;
         
-        %  Fixation dot
+        %  Draw fixation dot (internal check)
         p.functionHandles.graphicsManagerObj.drawFixationDot(...
             p.trial.display.ptr,p.trial.display.ctr([1 2]));
+        
+        %  Draw in selection indicator based on upcoming state
+        switch nextState
+            case 'response'
+                p.functionHandles.graphicsManagerObj.drawSelectionIndicator(...
+                    p.trial.display.ptr,p.functionHandles.trialOutcomeObj.response);
+        end
         
     case p.trial.pldaps.trialStates.frameDrawingFinished
         %  frameDrawingFinished--here we could do any steps that need to be
@@ -426,14 +441,15 @@ switch state
                         p.functionHandles.stateVariables.nextState = 'response';
                         p.functionHandles.analogStickWindowManagerObj.enableWindow('left','right');
                         p.functionHandles.eyePositionWindowManagerObj.enableWindow('fixation');
-                        p.functionHandles.stateVariables.nextState = 'response';
                         
                         %  Update windowing so the movement will be
                         %  relative rather than absolute
                         normalizedPosition = p.functionHandles.analogStickObj.normalizedPosition;
                         symbolWidth = 2*p.functionHandles.geometry.symbolRadius / p.functionHandles.analogStickObj.pWidth; %(p.functionHandles.geometry.symbolDisplacement+p.functionHandles.geometry.symbolRadius);
+%                         p.functionHandles.analogStickWindowManagerObj.addWindow(...
+%                             'engage',[-2*symbolWidth+normalizedPosition(1) -1 2*symbolWidth+normalizedPosition(1) -0.95],true);
                         p.functionHandles.analogStickWindowManagerObj.addWindow(...
-                            'engage',[-2*symbolWidth+normalizedPosition(1) -1 2*symbolWidth+normalizedPosition(1) -0.95],true);
+                            'engage',[-1 -1 1 -0.95],true);
                         p.functionHandles.analogStickWindowManagerObj.addWindow(...
                             'left',[-1 -1 -symbolWidth+normalizedPosition(1) -0.95],true);
                         p.functionHandles.analogStickWindowManagerObj.addWindow(...
@@ -441,7 +457,10 @@ switch state
                         p.functionHandles.analogStickWindowManagerObj.addWindow(...
                             'center',[-symbolWidth+normalizedPosition(1) -1 symbolWidth+normalizedPosition(1) -0.95],true);
                         
-                        p.functionHandles.analogStickObj.pCenter(1) = 2*p.functionHandles.analogStickObj.pCenter(1) - p.functionHandles.analogStickObj.screenPosition(1);
+                        %  Set the new center for the analog stick cursor
+                        %  based on the current position so that
+                        %  deflections are relative.
+                       % p.functionHandles.analogStickObj.pCenter(1) = 2*p.functionHandles.analogStickObj.pCenter(1) - p.functionHandles.analogStickObj.screenPosition(1);
                     end
                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
                 end
@@ -459,7 +478,6 @@ switch state
                     fprintf('Entered <strong>%s</strong> state for %5.3f sec\n',...
                         p.functionHandles.stateVariables.currentState,...
                         p.functionHandles.stateTiming.(p.functionHandles.stateVariables.currentState));
-                        p.functionHandles.trialOutcomeObj.recordResponse('response','center');
                 elseif(~p.functionHandles.eyePositionWindowManagerObj.inWindow('symbols'))
                     
                     %  Monkey is no longer viewing symbols.  This is a
@@ -518,11 +536,11 @@ switch state
                 
                 %  STATE:  return
                 %
-                %  Monkey must now return analog stick to neutral position
-                %  and fixate before he can receive feedback.
+                %  Monkey must now fixate before he can receive feedback.
                 if(p.functionHandles.stateVariables.firstEntryIntoState)
                     fprintf('Entered <strong>%s</strong> state\n',p.functionHandles.stateVariables.currentState);
-                elseif(p.functionHandles.analogStickWindowManagerObj.inWindow('neutral') && p.functionHandles.eyePositionWindowManagerObj.inWindow('fixation'))
+                %elseif(p.functionHandles.analogStickWindowManagerObj.inWindow('neutral') && p.functionHandles.eyePositionWindowManagerObj.inWindow('fixation'))
+                elseif(p.functionHandles.eyePositionWindowManagerObj.inWindow('fixation'))
                     fprintf('\tMonkey returned analog stick to neutral and is fixating at %0.3f sec\n',p.functionHandles.stateVariables.timeInState);
                     p.functionHandles.stateVariables.nextState = 'wait';
                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
@@ -558,18 +576,18 @@ switch state
                     p.functionHandles.analogStickCursorObj.visible = false;
                     p.functionHandles.analogStickWindowManagerObj.disableWindow('all');
                     p.functionHandles.eyePositionWindowManagerObj.disableWindow('all');
-                elseif(~p.functionHandles.analogStickWindowManagerObj.inWindow('neutral'))
-                    fprintf('\tMonkey moved analog stick at %0.3f sec\n',p.functionHandles.stateVariables.timeInState);
-                    p.functionHandles.trialOutcomeObj.recordAbort(...
-                        'abortState',p.functionHandles.stateVariables.currentState,...
-                        'abortMessage','analogStickError',...
-                        'abortTime',GetSecs);
-                    p.functionHandles.stateVariables.nextState = 'penalty';
-                    p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
-                    p.functionHandles.graphicsManagerObj.fixationDotVisible = false;
-                    p.functionHandles.analogStickCursorObj.visible = false;
-                    p.functionHandles.analogStickWindowManagerObj.disableWindow('all');
-                    p.functionHandles.eyePositionWindowManagerObj.disableWindow('all');
+%                 elseif(~p.functionHandles.analogStickWindowManagerObj.inWindow('neutral'))
+%                     fprintf('\tMonkey moved analog stick at %0.3f sec\n',p.functionHandles.stateVariables.timeInState);
+%                     p.functionHandles.trialOutcomeObj.recordAbort(...
+%                         'abortState',p.functionHandles.stateVariables.currentState,...
+%                         'abortMessage','analogStickError',...
+%                         'abortTime',GetSecs);
+%                     p.functionHandles.stateVariables.nextState = 'penalty';
+%                     p.functionHandles.stateVariables.stateDuration = p.functionHandles.stateTiming.(p.functionHandles.stateVariables.nextState) - p.trial.display.ifi;
+%                     p.functionHandles.graphicsManagerObj.fixationDotVisible = false;
+%                     p.functionHandles.analogStickCursorObj.visible = false;
+%                     p.functionHandles.analogStickWindowManagerObj.disableWindow('all');
+%                     p.functionHandles.eyePositionWindowManagerObj.disableWindow('all');
                 end
                 
             case 'feedback'

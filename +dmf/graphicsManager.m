@@ -28,17 +28,14 @@ classdef graphicsManager < handle
         
         stateTextures
         
-        stateConfig        
+        stateConfig
         stateNames
-        
-        trainingMode = false;
-        trainingAlpha = 1;
         
         fixationDotColor
         fixationDotWidth
         fixationDotVisible = false;
         
-        backwardsMaskTextures
+        coloredPixelNoiseTextures
     end
     
     methods
@@ -56,7 +53,7 @@ classdef graphicsManager < handle
                     error('%s is not a valid property of %s',varargin{i},mfilename('class'));
                 end
             end
-                        
+            
             %  Create initial state configuration
             obj.stateConfig = cell2struct(obj.stateConfig(2:2:end),obj.stateConfig(1:2:end),2);
             
@@ -141,7 +138,7 @@ classdef graphicsManager < handle
                     maskTexture = Screen('MakeTexture',obj.windowPtr,mask);
                     Screen('Blendfunction',obj.symbolTextures(i),'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA',[1 1 1 0]);
                     Screen('DrawTexture',obj.symbolTextures(i),maskTexture,[],[],[],[],[],obj.backgroundColor);
-                    Screen('Close',maskTexture);                    
+                    Screen('Close',maskTexture);
                 end
                 
                 %  Add an outline to the symbol
@@ -153,33 +150,34 @@ classdef graphicsManager < handle
             end
         end
         
-        %  prepareBackwardsMaskTextures
+        %  prepareColoredPixelNoiseTextures
         %
-        %  Random color mask (drawn from colorLibrary) same size as a symbol
-        function prepareBackwardsMaskTextures(obj)
+        %  Random color field (drawn from colorLibrary) with radius equal
+        %  to the apothem of a triangle
+        function prepareColoredPixelNoiseTextures(obj)
             colorNames = fieldnames(obj.colorLibrary);
             nColors = length(colorNames);
             colorLib = zeros(nColors,3);
             for i=1:nColors
                 colorLib(i,:) = obj.colorLibrary.(colorNames{i});
-            end            
+            end
             textureWidth = 2*obj.symbolRadius;
             [x,y] = meshgrid(linspace(-1,1,textureWidth),linspace(-1,1,textureWidth));
             [~,r] = cart2pol(x,y);
-            obj.backwardsMaskTextures = zeros(3,1);
+            obj.coloredPixelNoiseTextures = zeros(3,1);
             apothem = cos(pi/3);
             for i=1:3
-                backwardsMask = colorLib(unidrnd(nColors,numel(r),1),:);
-                backwardsMask(r(:)>apothem,:) = repmat(obj.backgroundColor,sum(r(:)>apothem),1);
-                backwardsMask = 255*reshape(backwardsMask,textureWidth,textureWidth,3);
-                obj.backwardsMaskTextures(i) = Screen('MakeTexture',obj.windowPtr,backwardsMask);
+                coloredPixelNoise = colorLib(unidrnd(nColors,numel(r),1),:);
+                coloredPixelNoise(r(:)>apothem,:) = repmat(obj.backgroundColor,sum(r(:)>apothem),1);
+                coloredPixelNoise = 255*reshape(coloredPixelNoise,textureWidth,textureWidth,3);
+                obj.coloredPixelNoiseTextures(i) = Screen('MakeTexture',obj.windowPtr,coloredPixelNoise);
             end
         end
         
         %  prepareStateTextures
         %
         %  Call during trial preparation to produce textures for each state
-        function prepareStateTextures(obj,selectedSet,rewardedResponse)            
+        function prepareStateTextures(obj,selectedSet)
             
             %  Make sure to include the names of any states for which we
             %  might have added the configurations after creating the
@@ -188,28 +186,39 @@ classdef graphicsManager < handle
             if(~isempty(obj.stateTextures))
                 Screen('Close',obj.stateTextures);
             end
-            obj.stateTextures = zeros(length(obj.stateNames),1);            
+            obj.stateTextures = zeros(length(obj.stateNames),1);
             
             %  Make some backwards mask textures
-            obj.prepareBackwardsMaskTextures;
+            obj.prepareColoredPixelNoiseTextures;
             
             %  Iterate over states specified in the configuration
             for i=1:length(obj.stateNames)
                 
-                %  Configuration specifies in which frames the comparators
-                %  and probe appear.  Set textureAlphas based on
-                %  configuration and training mode
-                textureAlphas = obj.stateConfig.(obj.stateNames{i});
-                if(obj.trainingMode)
-                    ix = ~strcmp(rewardedResponse,{'left','center','right'});
-                    textureAlphas(ix) = obj.trainingAlpha.*textureAlphas(ix);
+                stateName = cell2mat(regexp(obj.stateNames{i},'[a-z,A-Z]+','match'));
+                obj.stateTextures(i) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
+                switch stateName
+                    case 'symbols'
+                        textureAlphas = obj.stateConfig.(obj.stateNames{i});
+                        Screen('DrawTextures',obj.stateTextures(i),obj.symbolTextures(selectedSet),[],obj.centeredRects,[],[],textureAlphas);
+                    case 'response'
+                        textureAlphas = [1 1 1];
+                        Screen('DrawTextures',obj.stateTextures(i),obj.coloredPixelNoiseTextures,[],obj.centeredRects,[],[],textureAlphas);
                 end
-                obj.stateTextures(i) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);                
-                Screen('DrawTextures',obj.stateTextures(i),obj.symbolTextures(selectedSet),[],obj.centeredRects,[],[],textureAlphas);
-                if(any(strcmpi(obj.stateNames{i},{'response','return'})) && any(textureAlphas==0))
-                    ix = textureAlphas==0;
-                    Screen('DrawTextures',obj.stateTextures(i),obj.backwardsMaskTextures(ix),[],obj.centeredRects(:,ix));
-                end
+                
+                %                 %  Configuration specifies in which frames the comparators
+                %                 %  and probe appear.  Set textureAlphas based on
+                %                 %  configuration and training mode
+                %                 textureAlphas = obj.stateConfig.(obj.stateNames{i});
+                %                 if(obj.trainingMode)
+                %                     ix = ~strcmp(rewardedResponse,{'left','center','right'});
+                %                     textureAlphas(ix) = obj.trainingAlpha.*textureAlphas(ix);
+                %                 end
+                %                 obj.stateTextures(i) = Screen('OpenOffScreenWindow',obj.windowPtr,obj.backgroundColor);
+                %                 Screen('DrawTextures',obj.stateTextures(i),obj.symbolTextures(selectedSet),[],obj.centeredRects,[],[],textureAlphas);
+                %                 if(strcmpi(obj.stateNames{i},'response') && any(textureAlphas==0))
+                %                     ix = textureAlphas==0;
+                %                     Screen('DrawTextures',obj.stateTextures(i),obj.coloredPixelNoiseTextures(ix),[],obj.centeredRects(:,ix));
+                %                 end
             end
         end
         
@@ -219,7 +228,7 @@ classdef graphicsManager < handle
         %  draw it into the specified window.  If there is not an
         %  associated state texture, do nothing (this will produce a blank
         %  screen).
-        function drawStateTexture(obj,windowPtr,state)            
+        function drawStateTexture(obj,windowPtr,state)
             indx = strcmpi(state,obj.stateNames);
             if(any(indx))
                 Screen('DrawTexture',windowPtr,obj.stateTextures(indx));
@@ -233,6 +242,20 @@ classdef graphicsManager < handle
                     [pos(1); pos(2)],...
                     obj.fixationDotWidth,obj.fixationDotColor,[],2);
             end
+        end
+        
+        %  drawSelectionIndicator
+        function drawSelectionIndicator(obj,windowPtr,response)
+            s = sqrt(2)*obj.symbolRadius;
+            switch response
+                case 'left'
+                    selectionRect = CenterRectOnPointd([0 0 s s],obj.symbolCenters(1,1),obj.symbolCenters(1,2));
+                case 'right'
+                    selectionRect = CenterRectOnPointd([0 0 s s],obj.symbolCenters(3,1),obj.symbolCenters(3,2));
+                otherwise
+                    selectionRect = CenterRectOnPointd([0 0 s s],obj.symbolCenters(2,1),obj.symbolCenters(2,2));
+            end
+            Screen('FrameRect',windowPtr,[0 0 0],selectionRect,4);
         end
     end
 end

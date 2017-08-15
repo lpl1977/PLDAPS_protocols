@@ -46,12 +46,9 @@ p.functionHandles.colors.cursor.hold = [0.8 0.8 0.8];
 p.functionHandles.colors.cursor.symbols = p.functionHandles.colors.cursor.hold;
 p.functionHandles.colors.cursor.delay = p.functionHandles.colors.cursor.hold;
 p.functionHandles.colors.cursor.response = [0 0 0];
-p.functionHandles.colors.cursor.commit = [0 0 0];
 p.functionHandles.colors.cursor.warning = [0.8 0 0];
 p.functionHandles.colors.cursor.return = [0 0 0];
 p.functionHandles.colors.cursor.penalty = [0 0 0];
-p.functionHandles.colors.cursor.reward = [0 0 0];
-p.functionHandles.colors.cursor.error = [0 0 0];
 p.functionHandles.colors.cursor.wait = [0.8 0.8 0.8];
 p.functionHandles.colors.cursor.feedback = p.functionHandles.colors.cursor.wait;
 
@@ -97,40 +94,37 @@ dmf.adjustableParameters(p);
 
 %p.functionHandles.setObj = dmf.set('colors',colors,'patterns',patterns,'shapes',shapes);
 
+p.functionHandles.possibleResponses = {'left','center','right'};
+            
 [selectedSets.left,setSymbolCodes.left,selectionCodes.left,matchedFeatures.left] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.left);
-[selectedSets.right,setSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.right);
 [selectedSets.center,setSymbolCodes.center,selectionCodes.center,matchedFeatures.center] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.center);
+[selectedSets.right,setSymbolCodes.right,selectionCodes.right,matchedFeatures.right] = p.functionHandles.setObj.selector(p.functionHandles.selectionCodes.right);
 
 nSetsPerResponse = lcm(lcm(size(selectedSets.left,1),size(selectedSets.right,1)),size(selectedSets.center,1));
 selectedSets.left = repmat(selectedSets.left,nSetsPerResponse/size(selectedSets.left,1),1);
-selectedSets.right = repmat(selectedSets.right,nSetsPerResponse/size(selectedSets.right,1),1);
 selectedSets.center = repmat(selectedSets.center,nSetsPerResponse/size(selectedSets.center,1),1);
+selectedSets.right = repmat(selectedSets.right,nSetsPerResponse/size(selectedSets.right,1),1);
 
 selectionCodes.left = repmat(selectionCodes.left,nSetsPerResponse/size(selectionCodes.left,1),1);
-selectionCodes.right = repmat(selectionCodes.right,nSetsPerResponse/size(selectionCodes.right,1),1);
 selectionCodes.center = repmat(selectionCodes.center,nSetsPerResponse/size(selectionCodes.center,1),1);
+selectionCodes.right = repmat(selectionCodes.right,nSetsPerResponse/size(selectionCodes.right,1),1);
 
 setSymbolCodes.left = repmat(setSymbolCodes.left,nSetsPerResponse/size(setSymbolCodes.left,1),1);
-setSymbolCodes.right = repmat(setSymbolCodes.right,nSetsPerResponse/size(setSymbolCodes.right,1),1);
 setSymbolCodes.center = repmat(setSymbolCodes.center,nSetsPerResponse/size(setSymbolCodes.center,1),1);
+setSymbolCodes.right = repmat(setSymbolCodes.right,nSetsPerResponse/size(setSymbolCodes.right,1),1);
 
 matchedFeatures.left = repmat(matchedFeatures.left,nSetsPerResponse/size(matchedFeatures.left,1),1);
-matchedFeatures.right = repmat(matchedFeatures.right,nSetsPerResponse/size(matchedFeatures.right,1),1);
 matchedFeatures.center = repmat(matchedFeatures.center,nSetsPerResponse/size(matchedFeatures.center,1),1);
+matchedFeatures.right = repmat(matchedFeatures.right,nSetsPerResponse/size(matchedFeatures.right,1),1);
 
-p.functionHandles.possibleResponses = {'left','center','right'};
-if(~isfield(p.functionHandles,'includedResponses'))
-    p.functionHandles.includedResponses = unique(p.functionHandles.possibleResponses);
-end
-
-c = cell(nSetsPerResponse*numel(p.functionHandles.includedResponses),1);
-for i=1:length(p.functionHandles.includedResponses)
+c = cell(nSetsPerResponse*numel(p.functionHandles.possibleResponses),1);
+for i=1:length(p.functionHandles.possibleResponses)
     for j=1:nSetsPerResponse
-        c{(i-1)*nSetsPerResponse+j}.selectedSet = selectedSets.(p.functionHandles.includedResponses{i})(j,:);
-        c{(i-1)*nSetsPerResponse+j}.setSymbolCode = setSymbolCodes.(p.functionHandles.includedResponses{i}){j};
-        c{(i-1)*nSetsPerResponse+j}.rewardedResponse = p.functionHandles.includedResponses{i};
-        c{(i-1)*nSetsPerResponse+j}.selectionCode = selectionCodes.(p.functionHandles.includedResponses{i}){j};
-        c{(i-1)*nSetsPerResponse+j}.matchedFeatures = matchedFeatures.(p.functionHandles.includedResponses{i}){j};
+        c{(i-1)*nSetsPerResponse+j}.selectedSet = selectedSets.(p.functionHandles.possibleResponses{i})(j,:);
+        c{(i-1)*nSetsPerResponse+j}.setSymbolCode = setSymbolCodes.(p.functionHandles.possibleResponses{i}){j};
+        c{(i-1)*nSetsPerResponse+j}.rewardedResponse = p.functionHandles.possibleResponses{i};
+        c{(i-1)*nSetsPerResponse+j}.selectionCode = selectionCodes.(p.functionHandles.possibleResponses{i}){j};
+        c{(i-1)*nSetsPerResponse+j}.matchedFeatures = matchedFeatures.(p.functionHandles.possibleResponses{i}){j};
     end
 end
 p.conditions = cell(numel(c)*10,1);
