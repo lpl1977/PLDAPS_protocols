@@ -10,11 +10,12 @@ function p = setup(p)
 p.defaultParameters.pldaps.trialFunction = 'analogStick.debug.trialFunction';
 
 defaultColors(p);
-lplDefaultColors(p);
+lplColors(p);
+defaultBitNames(p);
 
 % Dot sizes for drawing
-p.trial.stimulus.eyeW = 8;      % eye indicator width in pixels (for console display)
-p.trial.stimulus.cursorW = 8;   % cursor width in pixels (for console display)
+%p.trial.stimulus.eyeW = 8;      % eye indicator width in pixels (for console display)
+%p.trial.stimulus.cursorW = 8;   % cursor width in pixels (for console display)
 
 %  Trial duration information--10 seconds
 p.trial.pldaps.maxTrialLength = 10;
